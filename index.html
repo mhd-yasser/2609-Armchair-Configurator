@@ -1,71 +1,11 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Interactive lounge chair configurator prototype by VREEL.">
-  <title>Lounge Chair Configurator</title>
-  <link rel="stylesheet" href="styles.css">
-  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js"></script>
-</head>
-<body>
-  <main class="configurator">
-    <section class="viewer-panel" aria-label="Interactive 3D product viewer">
-      <div class="brand">VREEL <span>INTERACTIVE</span></div>
-      <model-viewer id="product-viewer" src="model/Lounge_Chair.glb" alt="Lounge chair and ottoman in 3D"
-        camera-controls shadow-intensity="1.25" shadow-softness="0.85" exposure="1.05"
-        environment-image="neutral" interaction-prompt="auto" camera-orbit="35deg 68deg auto"
-        min-camera-orbit="auto 35deg auto" max-camera-orbit="auto 90deg auto">
-        <div slot="progress-bar" class="progress"><span></span></div>
-        <button slot="ar-button" class="ar-button">View in your space</button>
-      </model-viewer>
-      <div class="viewer-tools" aria-label="View controls">
-        <button type="button" data-action="zoom-out" aria-label="Zoom out">−</button>
-        <button type="button" data-action="reset">Reset</button>
-        <button type="button" data-action="zoom-in" aria-label="Zoom in">+</button>
-        <button type="button" data-action="rotate" aria-pressed="false">Rotate</button>
-      </div>
-    </section>
-    <aside class="product-panel">
-      <p class="eyebrow">Interactive product sample</p>
-      <h1>Lounge Chair</h1>
-      <p class="lead">Configure the leather, formed-wood shell and metal base in real time.</p>
-      <div class="specs"><span>Chair + ottoman</span><span>Web-ready GLB</span></div>
-
-      <fieldset class="options">
-        <legend>Leather</legend>
-        <div class="swatches">
-          <button class="swatch active" data-group="leather" data-option="black" aria-pressed="true"><i style="--swatch:#1e1e1f"></i><span>Black</span></button>
-          <button class="swatch" data-group="leather" data-option="cognac" aria-pressed="false"><i style="--swatch:#874b2d"></i><span>Cognac</span></button>
-          <button class="swatch" data-group="leather" data-option="cream" aria-pressed="false"><i style="--swatch:#d8c7a7"></i><span>Cream</span></button>
-          <button class="swatch" data-group="leather" data-option="olive" aria-pressed="false"><i style="--swatch:#59604b"></i><span>Olive</span></button>
-        </div>
-      </fieldset>
-      <fieldset class="options">
-        <legend>Wood shell</legend>
-        <div class="finish-row">
-          <button class="finish active" data-group="wood" data-option="walnut" aria-pressed="true">Walnut</button>
-          <button class="finish" data-group="wood" data-option="oak" aria-pressed="false">Oak</button>
-          <button class="finish" data-group="wood" data-option="black-ash" aria-pressed="false">Black ash</button>
-        </div>
-      </fieldset>
-      <fieldset class="options">
-        <legend>Metal base</legend>
-        <div class="finish-row">
-          <button class="finish active" data-group="metal" data-option="chrome" aria-pressed="true">Chrome</button>
-          <button class="finish" data-group="metal" data-option="black" aria-pressed="false">Black</button>
-          <button class="finish" data-group="metal" data-option="brass" aria-pressed="false">Brass</button>
-        </div>
-      </fieldset>
-      <div class="summary"><span>Current selection</span><strong id="selection">Black · Walnut · Chrome</strong></div>
-      <div class="actions">
-        <button id="print" class="secondary" type="button">Product summary</button>
-        <button id="add" class="primary" type="button">Add to project</button>
-      </div>
-      <p id="notice" class="notice" role="status" aria-live="polite"></p>
-      <p class="powered">Interactive product experience by VREEL</p>
-    </aside>
-  </main>
-  <script type="module" src="app.js"></script>
-</body>
-</html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Interactive executive desk configurator by VREEL."><title>Executive Desk Configurator</title><link rel="stylesheet" href="styles.css"><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js"></script></head>
+<body><main class="configurator"><section class="viewer-panel" aria-label="Interactive 3D product viewer"><div class="brand">VREEL <span>INTERACTIVE</span></div>
+<model-viewer id="product-viewer" src="model/desk-180-drawers-right.glb" alt="Configurable executive desk and chair in 3D" camera-controls shadow-intensity="1.2" shadow-softness=".9" exposure="1.05" environment-image="neutral" interaction-prompt="auto" camera-orbit="35deg 66deg auto" min-camera-orbit="auto 35deg auto" max-camera-orbit="auto 90deg auto"><div slot="progress-bar" class="progress"><span></span></div></model-viewer>
+<div class="viewer-tools"><button data-action="zoom-out">−</button><button data-action="reset">Reset</button><button data-action="zoom-in">+</button><button data-action="rotate" aria-pressed="false">Rotate</button></div></section>
+<aside class="product-panel"><p class="eyebrow">Interactive workspace sample</p><h1>Executive Desk</h1><p class="lead">Configure dimensions, storage position and finishes in real time.</p>
+<fieldset class="options"><legend>Desk width</legend><div class="finish-row"><button class="finish" data-model-group="size" data-value="160">160 cm</button><button class="finish active" data-model-group="size" data-value="180">180 cm</button><button class="finish" data-model-group="size" data-value="200">200 cm</button></div></fieldset>
+<fieldset class="options"><legend>Storage configuration</legend><div class="finish-row wrap"><button class="finish active" data-model-group="storage" data-value="drawers-right">Drawers right</button><button class="finish" data-model-group="storage" data-value="drawers-left">Drawers left</button><button class="finish" data-model-group="storage" data-value="metal-legs">Metal legs</button></div></fieldset>
+<fieldset class="options"><legend>Desktop finish</legend><div class="swatches"><button class="swatch active" data-material="desktop" data-value="walnut"><i style="--swatch:#704326"></i><span>Walnut</span></button><button class="swatch" data-material="desktop" data-value="oak"><i style="--swatch:#b58552"></i><span>Natural oak</span></button><button class="swatch" data-material="desktop" data-value="black"><i style="--swatch:#242424"></i><span>Black</span></button><button class="swatch" data-material="desktop" data-value="white"><i style="--swatch:#e8e7e2"></i><span>White</span></button></div></fieldset>
+<fieldset class="options"><legend>Metal finish</legend><div class="finish-row"><button class="finish active" data-material="metal" data-value="black">Black</button><button class="finish" data-material="metal" data-value="white">White</button><button class="finish" data-material="metal" data-value="chrome">Chrome</button></div></fieldset>
+<fieldset class="options"><legend>Chair upholstery</legend><div class="swatches"><button class="swatch active" data-material="chair" data-value="black"><i style="--swatch:#252629"></i><span>Black</span></button><button class="swatch" data-material="chair" data-value="cognac"><i style="--swatch:#8a4f31"></i><span>Cognac</span></button><button class="swatch" data-material="chair" data-value="olive"><i style="--swatch:#60664d"></i><span>Olive</span></button><button class="swatch" data-material="chair" data-value="sand"><i style="--swatch:#c4b293"></i><span>Sand</span></button></div></fieldset>
+<div class="summary"><span>Current selection</span><strong id="selection">180 cm · Drawers right · Walnut</strong></div><div class="actions"><button id="print" class="secondary">Product summary</button><button id="add" class="primary">Add to project</button></div><p id="notice" class="notice" role="status"></p><p class="powered">Interactive product experience by VREEL</p></aside></main><script type="module" src="app.js"></script></body></html>
