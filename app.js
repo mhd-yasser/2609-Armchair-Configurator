@@ -1,8 +1,8 @@
 const viewer=document.querySelector('#product-viewer'),selection=document.querySelector('#selection'),notice=document.querySelector('#notice');
-const state={size:'180',storage:'drawers-right',desktop:'walnut',metal:'black',chair:'black'};
-const names={'drawers-right':'Drawers right','drawers-left':'Drawers left','metal-legs':'Metal legs',glass:'Smoked glass',walnut:'Walnut',oak:'Natural oak',black:'Black',white:'White',chrome:'Chrome',cognac:'Cognac',olive:'Olive',sand:'Sand'};
-const presets={desktop:{glass:[[.26,.31,.32,.32],.12,0,'BLEND'],walnut:[[.28,.11,.035,1],.36,0,'OPAQUE'],oak:[[.58,.34,.14,1],.42,0,'OPAQUE'],black:[[.025,.025,.025,1],.38,0,'OPAQUE'],white:[[.82,.77,.64,1],.48,0,'OPAQUE']},metal:{black:[[.018,.022,.026,1],.26,.88],white:[[.76,.76,.73,1],.32,.55],chrome:[[.72,.75,.78,1],.14,1]},chair:{black:[[.025,.028,.03,1],.5,0],cognac:[[.34,.13,.055,1],.43,0],olive:[[.11,.14,.075,1],.52,0],sand:[[.58,.48,.34,1],.56,0]}};
-const materialNames={desktop:['*5'],metal:['[Color_008]1','[0131_Silver]'],chair:['HMI- 3P14 (Vinyl1']};
+const state={size:'180',storage:'drawers-right',desktop:'glass',metal:'black',chair:'black'};
+const names={'drawers-right':'Drawers right','drawers-left':'Drawers left','metal-legs':'Metal legs',glass:'Original black glass',walnut:'Walnut',oak:'Natural oak',black:'Black',white:'White',chrome:'Chrome',cognac:'Cognac',olive:'Olive',sand:'Sand'};
+const presets={desktop:{glass:[[.1098,.1098,.1098,.7216],.5,.5,'BLEND'],walnut:[[.28,.11,.035,1],.36,0,'OPAQUE'],oak:[[.58,.34,.14,1],.42,0,'OPAQUE'],black:[[.025,.025,.025,1],.38,0,'OPAQUE'],white:[[.82,.77,.64,1],.48,0,'OPAQUE']},metal:{black:[[.018,.022,.026,1],.26,.88],white:[[.76,.76,.73,1],.32,.55],chrome:[[.72,.75,.78,1],.14,1]},chair:{black:[[.025,.028,.03,1],.5,0],cognac:[[.34,.13,.055,1],.43,0],olive:[[.11,.14,.075,1],.52,0],sand:[[.58,.48,.34,1],.56,0]}};
+const materialNames={desktop:['*5'],metal:['[Color_008]1','[0131_Silver]','HMI- Polished Al1'],chair:['HMI- 3P14 (Vinyl1']};
 function active(selector,current){document.querySelectorAll(selector).forEach(b=>{const on=b===current;b.classList.toggle('active',on);b.setAttribute('aria-pressed',on)});}
 function updateSummary(){selection.textContent=`${state.size} cm · ${names[state.storage]} · ${names[state.desktop]}`;}
 function modelPath(){return `model/desk-${state.size}-${state.storage}.glb`;}
