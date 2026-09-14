@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Interactive furniture product configurator prototype by VREEL.">
+  <title>MAY Armchair Configurator</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f1b2d'/%3E%3Cpath d='M15 18l17 31 17-31h-9l-8 16-8-16z' fill='%23b68a4c'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://ajax.googleapis.com">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js"></script>
+</head>
+<body>
+  <main class="configurator">
+    <section class="viewer-panel" aria-label="Interactive 3D product viewer">
+      <div class="brand">VREEL <span>INTERACTIVE</span></div>
+      <model-viewer id="product-viewer"
+        src="model/scene.gltf"
+        alt="MAY armchair in 3D"
+        camera-controls
+        shadow-intensity="1.25"
+        shadow-softness="0.85"
+        exposure="1.05"
+        environment-image="neutral"
+        interaction-prompt="auto"
+        camera-orbit="35deg 72deg auto"
+        min-camera-orbit="auto 45deg auto"
+        max-camera-orbit="auto 90deg auto">
+        <div slot="progress-bar" class="progress"><span></span></div>
+        <button slot="ar-button" class="ar-button">View in your space</button>
+      </model-viewer>
+
+      <div class="viewer-tools" aria-label="View controls">
+        <button type="button" data-action="zoom-out" aria-label="Zoom out">−</button>
+        <button type="button" data-action="reset" aria-label="Reset view">Reset</button>
+        <button type="button" data-action="zoom-in" aria-label="Zoom in">+</button>
+        <button type="button" data-action="rotate" aria-pressed="false">Rotate</button>
+      </div>
+    </section>
+
+    <aside class="product-panel">
+      <p class="eyebrow">Interactive product sample</p>
+      <h1>MAY Armchair</h1>
+      <p class="lead">A configurable lounge chair prepared as a browser-based 3D product experience.</p>
+
+      <div class="specs">
+        <span>W 82 cm</span><span>D 86 cm</span><span>H 78 cm</span>
+      </div>
+
+      <fieldset class="options">
+        <legend>Upholstery</legend>
+        <div class="swatches">
+          <button class="swatch active" data-preset="fabric-light" aria-pressed="true">
+            <i style="--swatch:#b7aa98"></i><span>Light fabric</span>
+          </button>
+          <button class="swatch" data-preset="fabric-dark" aria-pressed="false">
+            <i style="--swatch:#3c4146"></i><span>Dark fabric</span>
+          </button>
+          <button class="swatch" data-preset="leather-brown" aria-pressed="false">
+            <i style="--swatch:#633d29"></i><span>Brown leather</span>
+          </button>
+          <button class="swatch" data-preset="leather-cream" aria-pressed="false">
+            <i style="--swatch:#d8c7a7"></i><span>Cream leather</span>
+          </button>
+        </div>
+      </fieldset>
+
+      <fieldset class="options">
+        <legend>Finish</legend>
+        <div class="finish-row">
+          <button class="finish active" data-finish="matte" aria-pressed="true">Matte</button>
+          <button class="finish" data-finish="satin" aria-pressed="false">Satin</button>
+        </div>
+      </fieldset>
+
+      <div class="summary">
+        <span>Current selection</span>
+        <strong id="selection">Light fabric · Matte</strong>
+      </div>
+
+      <div class="actions">
+        <button id="print" class="secondary" type="button">Product summary</button>
+        <button id="add" class="primary" type="button">Add to project</button>
+      </div>
+      <p id="notice" class="notice" role="status" aria-live="polite"></p>
+      <p class="powered">Interactive product experience by VREEL</p>
+    </aside>
+  </main>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
