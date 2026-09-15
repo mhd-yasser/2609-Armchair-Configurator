@@ -1,11 +1,155 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Interactive executive desk configurator by VREEL."><title>Executive Desk Configurator</title><link rel="stylesheet" href="styles.css"><script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js"></script></head>
-<body><main class="configurator"><section class="viewer-panel" aria-label="Interactive 3D product viewer"><div class="brand">VREEL <span>INTERACTIVE</span></div>
-<model-viewer id="product-viewer" src="model/desk-180-drawers-right.glb" alt="Configurable executive desk and chair in 3D" camera-controls shadow-intensity="1.2" shadow-softness=".9" exposure="1.05" environment-image="neutral" interaction-prompt="auto" camera-orbit="35deg 66deg auto" min-camera-orbit="auto 35deg auto" max-camera-orbit="auto 90deg auto"><div slot="progress-bar" class="progress"><span></span></div></model-viewer>
-<div class="viewer-tools"><button data-action="zoom-out">−</button><button data-action="reset">Reset</button><button data-action="zoom-in">+</button><button data-action="rotate" aria-pressed="false">Rotate</button></div></section>
-<aside class="product-panel"><p class="eyebrow">Interactive workspace sample</p><h1>Executive Desk</h1><p class="lead">Configure dimensions, storage position and finishes in real time.</p>
-<fieldset class="options"><legend>Desk width</legend><div class="finish-row"><button class="finish" data-model-group="size" data-value="160">160 cm</button><button class="finish active" data-model-group="size" data-value="180">180 cm</button><button class="finish" data-model-group="size" data-value="200">200 cm</button></div></fieldset>
-<fieldset class="options"><legend>Storage configuration</legend><div class="finish-row wrap"><button class="finish active" data-model-group="storage" data-value="drawers-right">Drawers right</button><button class="finish" data-model-group="storage" data-value="drawers-left">Drawers left</button><button class="finish" data-model-group="storage" data-value="metal-legs">Metal legs</button></div></fieldset>
-<fieldset class="options"><legend>Desktop material</legend><div class="swatches"><button class="swatch active" data-material="desktop" data-value="glass"><i style="--swatch:#24282a"></i><span>Original black glass</span></button><button class="swatch" data-material="desktop" data-value="walnut"><i style="--swatch:#704326"></i><span>Walnut</span></button><button class="swatch" data-material="desktop" data-value="oak"><i style="--swatch:#b58552"></i><span>Natural oak</span></button><button class="swatch" data-material="desktop" data-value="black"><i style="--swatch:#242424"></i><span>Black ash</span></button><button class="swatch" data-material="desktop" data-value="white"><i style="--swatch:#e8e7e2"></i><span>White oak</span></button></div></fieldset>
-<fieldset class="options"><legend>Metal finish</legend><div class="finish-row"><button class="finish active" data-material="metal" data-value="black">Black</button><button class="finish" data-material="metal" data-value="white">White</button><button class="finish" data-material="metal" data-value="chrome">Chrome</button></div></fieldset>
-<fieldset class="options"><legend>Chair upholstery</legend><div class="swatches"><button class="swatch active" data-material="chair" data-value="black"><i style="--swatch:#252629"></i><span>Black</span></button><button class="swatch" data-material="chair" data-value="cognac"><i style="--swatch:#8a4f31"></i><span>Cognac</span></button><button class="swatch" data-material="chair" data-value="olive"><i style="--swatch:#60664d"></i><span>Olive</span></button><button class="swatch" data-material="chair" data-value="sand"><i style="--swatch:#c4b293"></i><span>Sand</span></button></div></fieldset>
-<div class="summary"><span>Current selection</span><strong id="selection">180 cm · Drawers right · Walnut</strong></div><div class="actions"><button id="print" class="secondary">Product summary</button><button id="add" class="primary">Add to project</button></div><p id="notice" class="notice" role="status"></p><p class="powered">Interactive product experience by VREEL</p></aside></main><script type="module" src="app.js"></script></body></html>
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="VREEL interaktif yönetici masası yapılandırıcısı.">
+  <title>VREEL | Yönetici Masası</title>
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <main class="configurator">
+    <section class="viewer-panel" aria-label="Etkileşimli 3B ürün görünümü">
+      <header class="topbar">
+        <div class="brand">VREEL <span>ETKİLEŞİMLİ TASARIM</span></div>
+        <div class="product-mark"><strong>Yönetici Masası</strong><span>Hayal et. Yapılandır. Gerçekleştir.</span></div>
+      </header>
+
+      <model-viewer id="product-viewer" src="model/desk-180-drawers-right.glb"
+        alt="Yapılandırılabilir yönetici masası ve koltuğu"
+        camera-controls shadow-intensity="1.2" shadow-softness=".9" exposure="1.05"
+        environment-image="neutral" interaction-prompt="none"
+        camera-orbit="35deg 66deg auto" min-camera-orbit="auto 25deg auto" max-camera-orbit="auto 90deg auto">
+        <div slot="progress-bar" class="progress"><span></span></div>
+      </model-viewer>
+
+      <div id="pick-marker" class="pick-marker" hidden aria-hidden="true"></div>
+      <div id="picked-part" class="picked-part" hidden><span>Seçili parça</span><strong>Ürün parçası</strong></div>
+      <p class="viewer-hint">Bir parçayı seçmek için dokunun. Görünümü çevirmek için sürükleyin.</p>
+
+      <nav class="viewer-tools" aria-label="Kamera kontrolleri">
+        <button data-view="orbit" class="active" title="Serbest görünüm">Yörünge</button>
+        <button data-action="zoom-in" title="Yakınlaştır">Yakınlaştır</button>
+        <button data-action="reset" title="Görünümü sıfırla">Sıfırla</button>
+        <button data-action="rotate" aria-pressed="false" title="Otomatik döndür">Otomatik Döndür</button>
+        <i></i>
+        <button data-view="front">Ön</button>
+        <button data-view="side">Yan</button>
+        <button data-view="top">Üst</button>
+        <button data-action="snapshot" class="capture">Görsel Kaydet</button>
+      </nav>
+    </section>
+
+    <aside class="product-panel">
+      <div class="panel-heading">
+        <p class="eyebrow">ETKİLEŞİMLİ ÜRÜN DENEYİMİ</p>
+        <h1>Yönetici Masası</h1>
+        <p class="lead">Boyutları, keson yerleşimini ve yüzeyleri gerçek zamanlı olarak yapılandırın.</p>
+      </div>
+
+      <div class="tabs" role="tablist">
+        <button class="tab active" data-tab="configure" role="tab">YAPILANDIR</button>
+        <button class="tab" data-tab="details" role="tab">ÜRÜN DETAYLARI</button>
+      </div>
+
+      <section id="configure" class="tab-panel active">
+        <details class="option-card" open>
+          <summary><span>Masa Ölçüsü</span><b data-summary="size">180 cm</b></summary>
+          <div class="option-body finish-row">
+            <button class="finish" data-model-group="size" data-value="160">160 cm</button>
+            <button class="finish active" data-model-group="size" data-value="180">180 cm</button>
+            <button class="finish" data-model-group="size" data-value="200">200 cm</button>
+          </div>
+        </details>
+
+        <details class="option-card">
+          <summary><span>Keson Yerleşimi</span><b data-summary="storage">Sağ</b></summary>
+          <div class="option-body finish-row wrap">
+            <button class="finish active" data-model-group="storage" data-value="drawers-right">Sağ</button>
+            <button class="finish" data-model-group="storage" data-value="drawers-left">Sol</button>
+            <button class="finish" data-model-group="storage" data-value="metal-legs">Metal Ayak</button>
+          </div>
+        </details>
+
+        <details class="option-card" open>
+          <summary><span>Tabla Malzemesi</span><b data-summary="desktop">Siyah Cam</b></summary>
+          <div class="option-body swatches">
+            <button class="swatch active" data-material="desktop" data-value="glass"><i style="--swatch:#24282a"></i><span>Siyah Cam</span></button>
+            <button class="swatch" data-material="desktop" data-value="walnut"><i style="--swatch:#704326"></i><span>Ceviz</span></button>
+            <button class="swatch" data-material="desktop" data-value="oak"><i style="--swatch:#b58552"></i><span>Doğal Meşe</span></button>
+            <button class="swatch" data-material="desktop" data-value="black"><i style="--swatch:#242424"></i><span>Siyah Dişbudak</span></button>
+            <button class="swatch" data-material="desktop" data-value="white"><i style="--swatch:#e8e7e2"></i><span>Beyaz Meşe</span></button>
+          </div>
+        </details>
+
+        <details class="option-card">
+          <summary><span>Metal Yüzey</span><b data-summary="metal">Siyah</b></summary>
+          <div class="option-body finish-row">
+            <button class="finish active" data-material="metal" data-value="black">Siyah</button>
+            <button class="finish" data-material="metal" data-value="white">Beyaz</button>
+            <button class="finish" data-material="metal" data-value="chrome">Krom</button>
+          </div>
+        </details>
+
+        <details class="option-card">
+          <summary><span>Koltuk Döşemesi</span><b data-summary="chair">Siyah</b></summary>
+          <div class="option-body swatches">
+            <button class="swatch active" data-material="chair" data-value="black"><i style="--swatch:#252629"></i><span>Siyah</span></button>
+            <button class="swatch" data-material="chair" data-value="cognac"><i style="--swatch:#8a4f31"></i><span>Konyak</span></button>
+            <button class="swatch" data-material="chair" data-value="olive"><i style="--swatch:#60664d"></i><span>Zeytin</span></button>
+            <button class="swatch" data-material="chair" data-value="sand"><i style="--swatch:#c4b293"></i><span>Kum</span></button>
+          </div>
+        </details>
+
+        <section class="general-settings">
+          <h2>GENEL AYARLAR</h2>
+          <div class="setting-grid">
+            <div><h3>Sahne</h3><div class="finish-row compact">
+              <button class="finish active" data-scene="studio">Stüdyo</button>
+              <button class="finish" data-scene="office">Ofis</button>
+              <button class="finish" data-scene="transparent">Şeffaf</button>
+            </div></div>
+            <div><h3>Aydınlatma</h3><div class="finish-row compact">
+              <button class="finish active" data-light="soft">Yumuşak</button>
+              <button class="finish" data-light="day">Gün Işığı</button>
+              <button class="finish" data-light="dramatic">Dramatik</button>
+            </div><label class="range">Işık Şiddeti <input id="light-level" type="range" min="40" max="140" value="100"><output>100%</output></label></div>
+          </div>
+        </section>
+
+        <div class="summary"><span>Mevcut seçim</span><strong id="selection">180 cm · Keson Sağ · Siyah Cam · Siyah · Siyah</strong></div>
+        <div class="downloads">
+          <button id="datasheet">Ürün Teknik Föyü</button>
+          <button disabled title="Yakında">2D Çizimi İndir</button>
+          <button disabled title="Yakında">3D Modeli İndir</button>
+        </div>
+        <button id="add" class="primary">Projeye Ekle <span>→</span></button>
+        <p id="notice" class="notice" role="status"></p>
+      </section>
+
+      <section id="details" class="tab-panel">
+        <h2>Zamansız tasarım, esnek yapılandırma</h2>
+        <p>Yönetici Masası; çalışma, toplantı ve depolama ihtiyaçlarını tek bir dengeli kompozisyonda birleştirir. Ölçü ve yüzey seçenekleri farklı çalışma alanlarına uyarlanabilir.</p>
+        <dl class="detail-list">
+          <div><dt>Genişlik</dt><dd data-detail="size">180 cm</dd></div>
+          <div><dt>Keson</dt><dd data-detail="storage">Sağ</dd></div>
+          <div><dt>Tabla</dt><dd data-detail="desktop">Siyah Cam</dd></div>
+          <div><dt>Metal</dt><dd data-detail="metal">Siyah</dd></div>
+          <div><dt>Koltuk döşemesi</dt><dd data-detail="chair">Siyah</dd></div>
+        </dl>
+        <h3>Malzeme Teknik Föyleri</h3>
+        <div class="material-files"><button disabled>Tabla Malzemesi</button><button disabled>Metal Yüzey</button><button disabled>Koltuk Döşemesi</button></div>
+        <p class="coming">Malzeme dosyaları, onaylı dokümanlar eklendiğinde seçime göre etkinleşecektir.</p>
+      </section>
+      <p class="powered">VREEL tarafından geliştirilen etkileşimli ürün deneyimi</p>
+    </aside>
+  </main>
+
+  <div id="pdf-modal" class="modal" hidden>
+    <div class="modal-card"><button class="modal-close" aria-label="Kapat">×</button><h2>Ürün Teknik Föyü</h2><p>Mevcut görünüm ve seçimlerle A4 teknik föy hazırlandı.</p><div id="pdf-preview"></div><button id="download-pdf" class="primary">PDF İndir</button></div>
+  </div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
