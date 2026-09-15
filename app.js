@@ -29,8 +29,13 @@ viewer.addEventListener('click',e=>{if(Math.abs(e.movementX||0)>3)return;const r
 document.querySelectorAll('[data-model-group]').forEach(b=>b.addEventListener('click',()=>{const g=b.dataset.modelGroup;state[g]=b.dataset.value;activate(`[data-model-group="${g}"]`,b);notice.textContent='Yapılandırma güncelleniyor…';marker.hidden=picked.hidden=true;viewer.src=modelPath();updateText();}));
 document.querySelectorAll('[data-material]').forEach(b=>b.addEventListener('click',()=>{const g=b.dataset.material;state[g]=b.dataset.value;activate(`[data-material="${g}"]`,b);applyMaterial(g);updateText();}));
 document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{activate('.tab',b);document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id===b.dataset.tab));}));
-document.querySelectorAll('[data-scene]').forEach(b=>b.addEventListener('click',()=>{state.scene=b.dataset.scene;activate('[data-scene]',b);viewerPanel.classList.remove('office','transparent');if(state.scene!=='studio')viewerPanel.classList.add(state.scene);}));
-const lighting={soft:{exposure:1.05,shadow:1.2,softness:.9},day:{exposure:1.25,shadow:1,softness:.75},dramatic:{exposure:.82,shadow:1.75,softness:.45}};
+const environments={
+  studio:'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/studio_small_03_1k.hdr',
+  office:'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/poly_haven_studio_1k.hdr',
+  transparent:'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/studio_small_03_1k.hdr'
+};
+document.querySelectorAll('[data-scene]').forEach(b=>b.addEventListener('click',()=>{state.scene=b.dataset.scene;activate('[data-scene]',b);viewerPanel.classList.remove('office','transparent');if(state.scene!=='studio')viewerPanel.classList.add(state.scene);viewer.environmentImage=environments[state.scene];viewer.skyboxImage=state.scene==='office'?environments.office:null;}));
+const lighting={soft:{exposure:1,shadow:1.05,softness:.95},day:{exposure:1.17,shadow:.82,softness:.78},dramatic:{exposure:.78,shadow:1.55,softness:.42}};
 function applyLighting(){const p=lighting[state.light],level=state.lightLevel/100;viewer.exposure=p.exposure*level;viewer.shadowIntensity=p.shadow;viewer.shadowSoftness=p.softness;}
 document.querySelectorAll('[data-light]').forEach(b=>b.addEventListener('click',()=>{state.light=b.dataset.light;activate('[data-light]',b);applyLighting();}));
 document.querySelector('#light-level').addEventListener('input',e=>{state.lightLevel=Number(e.target.value);e.target.nextElementSibling.value=`${state.lightLevel}%`;applyLighting();});
