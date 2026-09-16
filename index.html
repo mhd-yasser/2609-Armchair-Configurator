@@ -106,16 +106,12 @@
 
         <section class="general-settings">
           <h2>GENEL AYARLAR</h2>
-          <div class="setting-grid">
-            <div><h3>Sahne</h3><div class="finish-row compact">
-              <button class="finish active" data-scene="studio">Stüdyo</button>
-              <button class="finish" data-scene="office">Ofis</button>
-              <button class="finish" data-scene="transparent">Şeffaf</button>
-            </div></div>
-            <div><h3>Aydınlatma</h3><div class="finish-row compact">
-              <button class="finish active" data-light="soft">Yumuşak</button>
-              <button class="finish" data-light="day">Gün Işığı</button>
-              <button class="finish" data-light="dramatic">Dramatik</button>
+          <div class="setting-grid lighting-only">
+            <div><h3>Aydınlatma Modu</h3><div class="finish-row compact wrap">
+              <button class="finish active" data-light="soft">Yumuşak Stüdyo</button>
+              <button class="finish" data-light="day">Pencere Işığı</button>
+              <button class="finish" data-light="warm">Sıcak İç Mekân</button>
+              <button class="finish" data-light="dramatic">Editoryal</button>
             </div><label class="range">Işık Şiddeti <input id="light-level" type="range" min="40" max="140" value="100"><output>100%</output></label></div>
           </div>
         </section>
