@@ -3,8 +3,7 @@ const selection=document.querySelector('#selection');
 const notice=document.querySelector('#notice');
 const marker=document.querySelector('#pick-marker');
 const picked=document.querySelector('#picked-part');
-const viewerPanel=document.querySelector('.viewer-panel');
-const state={size:'180',storage:'drawers-right',desktop:'glass',metal:'black',chair:'black',scene:'studio',light:'soft',lightLevel:100};
+const state={size:'180',storage:'drawers-right',desktop:'glass',metal:'black',chair:'black',light:'soft',lightLevel:100};
 const names={'drawers-right':'Keson Sağ','drawers-left':'Keson Sol','metal-legs':'Metal Ayak',glass:'Siyah Cam',walnut:'Ceviz',oak:'Doğal Meşe',black:'Siyah',white:'Beyaz',chrome:'Krom',cognac:'Konyak',olive:'Zeytin',sand:'Kum'};
 const presets={desktop:{glass:[[.1098,.1098,.1098,.7216],.5,.5,'BLEND'],walnut:[[.28,.11,.035,1],.36,0,'OPAQUE'],oak:[[.58,.34,.14,1],.42,0,'OPAQUE'],black:[[.025,.025,.025,1],.38,0,'OPAQUE'],white:[[.82,.77,.64,1],.48,0,'OPAQUE']},metal:{black:[[.018,.022,.026,1],.26,.88],white:[[.76,.76,.73,1],.32,.55],chrome:[[.72,.75,.78,1],.14,1]},chair:{black:[[.025,.028,.03,1],.5,0],cognac:[[.34,.13,.055,1],.43,0],olive:[[.11,.14,.075,1],.52,0],sand:[[.58,.48,.34,1],.56,0]}};
 const materialNames={desktop:['*5'],metal:['[Color_008]1','[0131_Silver]','HMI- Polished Al1'],chair:['HMI- 3P14 (Vinyl1']};
@@ -29,10 +28,10 @@ viewer.addEventListener('click',e=>{if(Math.abs(e.movementX||0)>3)return;const r
 document.querySelectorAll('[data-model-group]').forEach(b=>b.addEventListener('click',()=>{const g=b.dataset.modelGroup;state[g]=b.dataset.value;activate(`[data-model-group="${g}"]`,b);notice.textContent='Yapılandırma güncelleniyor…';marker.hidden=picked.hidden=true;viewer.src=modelPath();updateText();}));
 document.querySelectorAll('[data-material]').forEach(b=>b.addEventListener('click',()=>{const g=b.dataset.material;state[g]=b.dataset.value;activate(`[data-material="${g}"]`,b);applyMaterial(g);updateText();}));
 document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{activate('.tab',b);document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id===b.dataset.tab));}));
-document.querySelectorAll('[data-scene]').forEach(b=>b.addEventListener('click',()=>{state.scene=b.dataset.scene;activate('[data-scene]',b);viewerPanel.classList.remove('office','transparent');if(state.scene!=='studio')viewerPanel.classList.add(state.scene);viewer.removeAttribute('skybox-image');}));
 const lighting={
   soft:{environment:'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/poly_haven_studio_1k.hdr',exposure:1.05,shadow:.85,softness:1},
   day:{environment:'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/brown_photostudio_02_1k.hdr',exposure:1.28,shadow:1.35,softness:.72},
+  warm:{environment:'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/art_studio_1k.hdr',exposure:.96,shadow:1.15,softness:.82},
   dramatic:{environment:'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/studio_small_06_1k.hdr',exposure:.72,shadow:2,softness:.28}
 };
 function applyLighting(){const p=lighting[state.light],level=state.lightLevel/100;viewer.environmentImage=p.environment;viewer.exposure=p.exposure*level;viewer.shadowIntensity=p.shadow;viewer.shadowSoftness=p.softness;viewer.removeAttribute('skybox-image');}
