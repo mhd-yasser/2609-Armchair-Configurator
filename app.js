@@ -34,8 +34,8 @@ const environments={
   office:'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/poly_haven_studio_1k.hdr',
   transparent:'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/studio_small_03_1k.hdr'
 };
-document.querySelectorAll('[data-scene]').forEach(b=>b.addEventListener('click',()=>{state.scene=b.dataset.scene;activate('[data-scene]',b);viewerPanel.classList.remove('office','transparent');if(state.scene!=='studio')viewerPanel.classList.add(state.scene);viewer.environmentImage=environments[state.scene];viewer.skyboxImage=state.scene==='office'?environments.office:null;}));
-const lighting={soft:{exposure:1,shadow:1.05,softness:.95},day:{exposure:1.17,shadow:.82,softness:.78},dramatic:{exposure:.78,shadow:1.55,softness:.42}};
+document.querySelectorAll('[data-scene]').forEach(b=>b.addEventListener('click',()=>{state.scene=b.dataset.scene;activate('[data-scene]',b);viewerPanel.classList.remove('office','transparent');if(state.scene!=='studio')viewerPanel.classList.add(state.scene);viewer.environmentImage=environments[state.scene];viewer.removeAttribute('skybox-image');}));
+const lighting={soft:{exposure:1.05,shadow:1.2,softness:.9},day:{exposure:1.25,shadow:1,softness:.75},dramatic:{exposure:.82,shadow:1.75,softness:.45}};
 function applyLighting(){const p=lighting[state.light],level=state.lightLevel/100;viewer.exposure=p.exposure*level;viewer.shadowIntensity=p.shadow;viewer.shadowSoftness=p.softness;}
 document.querySelectorAll('[data-light]').forEach(b=>b.addEventListener('click',()=>{state.light=b.dataset.light;activate('[data-light]',b);applyLighting();}));
 document.querySelector('#light-level').addEventListener('input',e=>{state.lightLevel=Number(e.target.value);e.target.nextElementSibling.value=`${state.lightLevel}%`;applyLighting();});
