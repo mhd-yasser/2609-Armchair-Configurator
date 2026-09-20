@@ -1,32 +1,31 @@
-# 2609 Armchair Configurator
+# VREEL Desk Setup Configurator
 
-Interactive 3D furniture product configurator prototype by VREEL.
+A browser based 3D product configurator for the supplied Desk Setup.glb. The page uses model-viewer and works when served over HTTP.
 
-## Current prototype
+## Finish controls
 
-- Browser-based 3D product viewer
-- Four upholstery presets
-- Matte and satin finish controls
-- Orbit, zoom, reset, and auto-rotation controls
-- Responsive desktop/mobile interface
-- Current-selection summary
-- Print/product-summary prototype
-- Add-to-project interaction prototype
+Seven independent groups: desktop, cabinet drawer fronts, desk metal, desk front panel, chair upholstery, chair wood, and chair metal. Each group has a separate panel; selecting a part in the model opens a paginated radial finish selector. Cabinet body wood follows wood selections on the cabinet, and retains its original finish when either solid MDF drawer-front option is selected.
 
-## Model limitation
+Wood options include the original embedded wood plus four compressed Drive finishes. Upholstery options include the original plus eleven compressed Drive finishes. Desk and chair metal each offer matte black, matte white, satin aluminum, bright chrome, and bright gold. The site includes image export and an A4 selection sheet.
 
-The legacy armchair model contains a single mesh and material. Material presets therefore affect the complete chair. The production demo should use a model split into separately named materials such as `Upholstery`, `Accent`, and `Metal`.
+The previous placeholder models have been removed. The uploaded Desk Setup GLB provides one physical configuration: the new interface intentionally does not offer unverified sizes or drawer relocation.
 
 ## Run locally
-
-Serve the repository over HTTP, for example:
 
 ```bash
 python -m http.server 8000
 ```
 
-Then open `http://localhost:8000`.
+Open http://localhost:8000. The model and texture URLs must be served from the same site.
 
-## Model attribution
+## Regenerating assets
 
-See [model/LICENSE.txt](model/LICENSE.txt). The current prototype model is retained from the earlier ArmchairViewer experiment and is used only as a temporary demo asset.
+Place the original Drive color maps as JPGs under `textures/source/` using the short filenames used in `app.js`. Run:
+
+```bash
+python tools/prepare_assets.py '/path/to/Desk Setup.glb'
+gltf-transform draco model/desk-setup-web.glb model/desk-setup-draco.glb --method edgebreaker
+python tools/split_model.py model/desk-setup-draco.glb
+```
+
+This separates shared glTF materials, adds planar UVs to otherwise untextured drawer fronts and front panels, reduces embedded and optional color maps to 1024px, and compresses geometry. The original uploaded model is not included in the repo; the static binary parts rebuild the optimized model in the browser.
