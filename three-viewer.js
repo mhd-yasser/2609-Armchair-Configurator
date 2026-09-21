@@ -36,6 +36,16 @@ export function createViewer(element){
   const rim=new THREE.DirectionalLight(0xffffff,.65);
   rim.position.set(1,7,5);scene.add(rim);
   const ambient=new THREE.HemisphereLight(0xffffff,0xd7dce2,1.15);scene.add(ambient);
+  const lightingPresets={
+    default:{key:3.2,fill:1.35,rim:.45,ambient:1.35,exposure:1.08,environment:.65,position:[-2,10,5],shadow:.65},
+    studio:{key:4.4,fill:1.7,rim:.65,ambient:1.15,exposure:1.12,environment:.55,position:[-2.8,11,4],shadow:.72},
+    cinematic:{key:4.1,fill:.95,rim:1.25,ambient:.85,exposure:1.03,environment:.4,position:[-3.5,10,3],shadow:.78}
+  };
+  let lightingMode='studio',shadowsEnabled=true;
+  function applyLighting(){const p=lightingPresets[lightingMode];light.intensity=p.key;fill.intensity=p.fill;rim.intensity=p.rim;ambient.intensity=p.ambient;
+    light.position.set(...p.position);light.shadow.intensity=p.shadow;light.castShadow=shadowsEnabled;
+    renderer.toneMappingExposure=p.exposure;scene.environmentIntensity=p.environment;renderer.shadowMap.needsUpdate=true;
+  }
   let object=null,ground=null,materialAdapters=[],radius=3,baseRadius=3,environmentUrl='',darkScene=false;
   const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
   const draco=new DRACOLoader();draco.setDecoderPath('vendor/addons/libs/draco/');
@@ -90,7 +100,7 @@ export function createViewer(element){
     new RGBELoader().load(url,texture=>{
       if(url!==environmentUrl){texture.dispose();return;}
       texture.mapping=THREE.EquirectangularReflectionMapping;
-      const old=scene.environment;scene.environment=texture;scene.environmentIntensity=.55;scene.environmentRotation.y=THREE.MathUtils.degToRad(25);
+      const old=scene.environment;scene.environment=texture;scene.environmentIntensity=lightingPresets[lightingMode].environment;scene.environmentRotation.y=THREE.MathUtils.degToRad(25);
       if(old)old.dispose();
     },undefined,error=>console.warn('Studio environment unavailable',error));
   }
@@ -110,7 +120,8 @@ export function createViewer(element){
     model:{get:()=>object?{materials:materialAdapters}:null},
     environmentImage:{set:environment},
     exposure:{set:value=>renderer.toneMappingExposure=value},
-    shadowIntensity:{set:value=>{light.castShadow=Number(value)>0;renderer.shadowMap.needsUpdate=true;}},
+    shadowIntensity:{set:value=>{shadowsEnabled=Number(value)>0;light.castShadow=shadowsEnabled;renderer.shadowMap.needsUpdate=true;}},
+    lightingPreset:{set:value=>{if(!lightingPresets[value])return;lightingMode=value;applyLighting();},get:()=>lightingMode},
     sceneTheme:{set:value=>{darkScene=value==='dark';if(ground)ground.material.color.setHex(darkScene?0x343d49:0xe9edf0);}},
     shadowSoftness:{set:value=>{light.shadow.radius=Math.max(2.5,Number(value)*7);light.shadow.needsUpdate=true;}},
     cameraOrbit:{set(value){const [theta,phi,r]=value.split(' ');
