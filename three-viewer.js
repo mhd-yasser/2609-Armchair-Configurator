@@ -7,6 +7,8 @@ import {RGBELoader} from 'three/addons/loaders/RGBELoader.js';
 // Small adapter for the configurator UI. Every visible finish is a real Three.js material.
 export function createViewer(element){
   const scene=new THREE.Scene();
+  const backdrop=new THREE.Color(0xf4f7fa);
+  scene.background=backdrop;
   const camera=new THREE.PerspectiveCamera(35,1,.01,1000);
   const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});
   renderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -70,11 +72,13 @@ export function createViewer(element){
       materialAdapters=[...materials.values()].map(wrapMaterial);
       const box=new THREE.Box3().setFromObject(object),dim=box.getSize(new THREE.Vector3());
       const center=box.getCenter(new THREE.Vector3());controls.target.copy(center);
-      radius=Math.max(dim.length()*1.28,2);baseRadius=radius;camera.near=Math.max(.01,radius/1000);camera.far=radius*30;camera.updateProjectionMatrix();face();
+      radius=Math.max(dim.length()*1.28,2);baseRadius=radius;camera.near=Math.max(.01,radius/1000);camera.far=radius*80;camera.updateProjectionMatrix();face();
+      // Blend the distant floor into the backdrop, including when the camera is nearly horizontal.
+      scene.fog=new THREE.Fog(backdrop,baseRadius*2.5,baseRadius*16);
       for(const studioLight of [light,fill,rim]){studioLight.target.position.copy(center);scene.add(studioLight.target);}
-      const extent=Math.max(dim.x,dim.z)*1.65;
+      const extent=Math.max(dim.x,dim.z)*2.5;
       light.shadow.camera.left=-extent;light.shadow.camera.right=extent;light.shadow.camera.top=extent;light.shadow.camera.bottom=-extent;light.shadow.camera.updateProjectionMatrix();
-      const floorSize=extent*30;
+      const floorSize=baseRadius*150;
       // One opaque floor receives the shadow directly; layered transparent planes
       // can produce overlapping patches and depth artifacts around the furniture.
       ground=new THREE.Mesh(new THREE.PlaneGeometry(floorSize,floorSize),new THREE.MeshStandardMaterial({color:darkScene?0x343d49:0xe9edf0,roughness:1,metalness:0}));
@@ -109,7 +113,7 @@ export function createViewer(element){
     environmentImage:{set:environment},
     exposure:{set:value=>renderer.toneMappingExposure=value},
     shadowIntensity:{set:value=>{light.castShadow=Number(value)>0;renderer.shadowMap.needsUpdate=true;}},
-    sceneTheme:{set:value=>{darkScene=value==='dark';if(ground)ground.material.color.setHex(darkScene?0x343d49:0xe9edf0);}},
+    sceneTheme:{set:value=>{darkScene=value==='dark';backdrop.setHex(darkScene?0x252d39:0xf4f7fa);if(scene.fog)scene.fog.color.copy(backdrop);if(ground)ground.material.color.setHex(darkScene?0x343d49:0xe9edf0);}},
     shadowSoftness:{set:value=>{light.shadow.radius=Math.max(1,Number(value)*4);light.shadow.needsUpdate=true;}},
     cameraOrbit:{set(value){const [theta,phi,r]=value.split(' ');
       radius=r==='auto'?baseRadius:(parseFloat(r)||radius);
