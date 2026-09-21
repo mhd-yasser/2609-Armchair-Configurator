@@ -14,7 +14,8 @@ export function createViewer(element){
   renderer.toneMappingExposure=1;
   renderer.shadowMap.enabled=true;
   renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-  renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+  const mobile=matchMedia('(max-width:700px)').matches;
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobile?1.5:2));
   renderer.domElement.setAttribute('aria-label',element.getAttribute('aria-label')||'3D ürün görünümü');
   element.append(renderer.domElement);
   const controls=new OrbitControls(camera,renderer.domElement);
@@ -23,11 +24,11 @@ export function createViewer(element){
   controls.autoRotateSpeed=1.3;
   const light=new THREE.DirectionalLight(0xffffff,6.7);
   light.position.set(-4.35,1.74,8.75);light.castShadow=true;
-  light.shadow.mapSize.set(2048,2048);light.shadow.bias=-.0003;
+  light.shadow.mapSize.set(mobile?1024:2048,mobile?1024:2048);light.shadow.bias=-.0003;
   light.shadow.camera.near=.1;light.shadow.camera.far=100;
   light.shadow.radius=3;scene.add(light);
   const ambient=new THREE.AmbientLight(0xffffff,.1);scene.add(ambient);
-  let object=null,ground=null,materialAdapters=[],radius=3,environmentUrl='';
+  let object=null,ground=null,materialAdapters=[],radius=3,baseRadius=3,environmentUrl='';
   const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
   const draco=new DRACOLoader();draco.setDecoderPath('vendor/addons/libs/draco/');
   const loader=new GLTFLoader();loader.setDRACOLoader(draco);
@@ -62,7 +63,7 @@ export function createViewer(element){
       materialAdapters=[...materials.values()].map(wrapMaterial);
       const box=new THREE.Box3().setFromObject(object),dim=box.getSize(new THREE.Vector3());
       const center=box.getCenter(new THREE.Vector3());controls.target.copy(center);
-      radius=Math.max(dim.length()*1.28,2);camera.near=Math.max(.01,radius/1000);camera.far=radius*30;camera.updateProjectionMatrix();face();
+      radius=Math.max(dim.length()*1.28,2);baseRadius=radius;camera.near=Math.max(.01,radius/1000);camera.far=radius*30;camera.updateProjectionMatrix();face();
       light.target.position.copy(center);scene.add(light.target);
       const extent=Math.max(dim.x,dim.z)*1.65;
       light.shadow.camera.left=-extent;light.shadow.camera.right=extent;light.shadow.camera.top=extent;light.shadow.camera.bottom=-extent;light.shadow.camera.updateProjectionMatrix();
@@ -99,7 +100,10 @@ export function createViewer(element){
     exposure:{set:value=>renderer.toneMappingExposure=value},
     shadowIntensity:{set:value=>{light.castShadow=Number(value)>0;if(ground)ground.visible=Number(value)>0;renderer.shadowMap.needsUpdate=true;}},
     shadowSoftness:{set:value=>{light.shadow.radius=Math.max(1,Number(value)*4);light.shadow.needsUpdate=true;}},
-    cameraOrbit:{set(value){const [theta,phi,r]=value.split(' ');if(r&&r!=='auto')radius=parseFloat(r)||radius;face(parseFloat(theta),parseFloat(phi));}},
+    cameraOrbit:{set(value){const [theta,phi,r]=value.split(' ');
+      radius=r==='auto'?baseRadius:(parseFloat(r)||radius);
+      const degrees=v=>v.endsWith('rad')?THREE.MathUtils.radToDeg(parseFloat(v)):parseFloat(v);
+      face(degrees(theta),degrees(phi));}},
     cameraTarget:{set(value){if(value==='auto'&&object)controls.target.copy(new THREE.Box3().setFromObject(object).getCenter(new THREE.Vector3()));}},
     fieldOfView:{set(){}},
   });
