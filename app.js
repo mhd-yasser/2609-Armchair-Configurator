@@ -47,6 +47,7 @@ const groups = {
 const state = Object.fromEntries(Object.entries(groups).map(([key,group])=>[key,group.initial]));
 const originalMaterials = new Map();
 const textures = new Map();
+const mappedTextures = new Map();
 let wheelGroup = null;
 let wheelPage = 0;
 let pointerStart = null;
@@ -77,16 +78,34 @@ async function textureFor(image){
   if(!textures.has(image))textures.set(image,viewer.createTexture(`textures/${image}`,'image/jpeg'));
   return textures.get(image);
 }
+async function mappedTextureFor(image,materialName,originalTexture){
+  const cacheKey=`${image}:${materialName}`;
+  if(!mappedTextures.has(cacheKey))mappedTextures.set(cacheKey,(async()=>{
+    const texture=(await textureFor(image)).clone();
+    if(originalTexture){
+      texture.offset.copy(originalTexture.offset);
+      texture.repeat.copy(originalTexture.repeat);
+      texture.center.copy(originalTexture.center);
+      texture.rotation=originalTexture.rotation;
+      texture.wrapS=originalTexture.wrapS;
+      texture.wrapT=originalTexture.wrapT;
+      texture.channel=originalTexture.channel;
+    }
+    texture.needsUpdate=true;
+    return texture;
+  })());
+  return mappedTextures.get(cacheKey);
+}
 function currentMaterials(key){return viewer.model?.materials.filter(m=>groups[key].materials.includes(m.name))||[];}
 async function applyMaterial(key){
   if(!viewer.model)return;
   const o=option(key);
   try{
-    const texture=o.image?await textureFor(o.image):null;
-    // Texture loading is asynchronous. Ignore an older choice finishing late.
-    if(option(key)!==o)return;
     for(const material of currentMaterials(key)){
       const original=originalMaterials.get(material.name);
+      const texture=o.image?await mappedTextureFor(o.image,material.name,original?.texture):null;
+      // Texture loading is asynchronous. Ignore an older choice finishing late.
+      if(option(key)!==o)return;
       const pbr=material.pbrMetallicRoughness;
       if(key==='cabinet'&&material.name==='VREEL_cabinet'&&!o.image){
         pbr.baseColorTexture.setTexture(original?.texture||null);
