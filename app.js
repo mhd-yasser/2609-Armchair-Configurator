@@ -1,4 +1,5 @@
-const viewer = document.querySelector('#product-viewer');
+import {createViewer} from './three-viewer.js';
+const viewer = createViewer(document.querySelector('#product-viewer'));
 const selection = document.querySelector('#selection');
 const notice = document.querySelector('#notice');
 const wheel = document.querySelector('#material-wheel');
@@ -49,6 +50,8 @@ const textures = new Map();
 let wheelGroup = null;
 let wheelPage = 0;
 let pointerStart = null;
+let modelBlob = null;
+const studio={environment:'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/brown_photostudio_02_1k.hdr',exposure:1.12,shadow:1.35,softness:.72};
 function option(key){return groups[key].options.find(o=>o.id===state[key]);}
 function escapeText(value){return String(value).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function swatchStyle(o){return o.image?`background-image:url('textures/${o.image}')`:`background-color:${o.color}`;}
@@ -132,12 +135,12 @@ function renderWheel(){
 }
 function closeWheel(){wheel.hidden=true;wheelGroup=null;}
 function openWheel(key,x,y){
-  const box=viewer.getBoundingClientRect();
+  const box=wheel.parentElement.getBoundingClientRect();
   wheelGroup=key;wheelPage=Math.floor(Math.max(0,groups[key].options.findIndex(o=>o.id===state[key]))/8);
   const radius=window.matchMedia('(max-width:500px)').matches?125:147;
-  const clamp=(point,extent)=>extent<=radius*2?extent/2:Math.max(radius,Math.min(point,extent-radius));
-  wheel.style.left=`${clamp(x-box.left,box.width)}px`;
-  wheel.style.top=`${clamp(y-box.top,box.height)}px`;
+  const clamp=(point,extent,min,max)=>extent<=radius*2?extent/2:Math.max(min,Math.min(point,max));
+  wheel.style.left=`${clamp(x-box.left,box.width,radius,box.width-radius)}px`;
+  wheel.style.top=`${clamp(y-box.top,box.height,radius+25,box.height-radius-30)}px`;
   wheel.hidden=false;renderWheel();
   document.querySelector(`[data-group="${key}"]`)?.setAttribute('open','');
 }
@@ -145,6 +148,20 @@ wheelOptions.addEventListener('click',e=>{const b=e.target.closest('button[data-
 wheel.querySelector('#wheel-prev').addEventListener('click',()=>{wheelPage--;renderWheel();});
 wheel.querySelector('#wheel-next').addEventListener('click',()=>{wheelPage++;renderWheel();});
 wheel.querySelector('#wheel-close').addEventListener('click',closeWheel);
+let wheelDrag=null;
+const dragHandle=wheel.querySelector('#wheel-drag');
+dragHandle.addEventListener('pointerdown',e=>{
+  e.preventDefault();e.stopPropagation();dragHandle.setPointerCapture(e.pointerId);
+  wheelDrag={x:e.clientX,y:e.clientY,left:parseFloat(wheel.style.left),top:parseFloat(wheel.style.top)};
+});
+dragHandle.addEventListener('pointermove',e=>{
+  if(!wheelDrag)return;
+  const box=wheel.parentElement.getBoundingClientRect(),radius=wheel.offsetWidth/2;
+  const clamp=(value,min,max)=>min>max?(min+max)/2:Math.max(min,Math.min(max,value));
+  wheel.style.left=`${clamp(wheelDrag.left+e.clientX-wheelDrag.x,radius,box.width-radius)}px`;
+  wheel.style.top=`${clamp(wheelDrag.top+e.clientY-wheelDrag.y,radius+25,box.height-radius-30)}px`;
+});
+for(const event of ['pointerup','pointercancel'])dragHandle.addEventListener(event,()=>wheelDrag=null);
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeWheel();});
 viewer.addEventListener('pointerdown',e=>{pointerStart={x:e.clientX,y:e.clientY};});
 viewer.addEventListener('pointerup',e=>{
@@ -176,7 +193,8 @@ async function loadModel(){
       if(!response.ok)throw new Error(`Model part ${index}: ${response.status}`);
       return response.arrayBuffer();
     })));
-    viewer.src=URL.createObjectURL(new Blob(parts,{type:'model/gltf-binary'}));
+    modelBlob=new Blob(parts,{type:'model/gltf-binary'});
+    viewer.src=URL.createObjectURL(modelBlob);
   }catch(error){console.error(error);notice.textContent='3D model yüklenemedi. Lütfen sayfayı yenileyin.';document.querySelector('#model-loading').textContent=notice.textContent;}
 }
 loadModel();
@@ -184,18 +202,16 @@ document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{act
 function cleanCapture(){const wasOpen=!wheel.hidden;wheel.hidden=true;return new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve(wasOpen))));}
 function dataUrlToBlob(url){const [meta,data]=url.split(',');const mime=meta.match(/:(.*?);/)[1];const bytes=atob(data);const arr=new Uint8Array(bytes.length);for(let i=0;i<bytes.length;i++)arr[i]=bytes.charCodeAt(i);return new Blob([arr],{type:mime});}
 async function capturePng(download=true){const wheelWas=await cleanCapture();const url=await viewer.toDataURL('image/png',1);wheel.hidden=!wheelWas;if(download){const a=document.createElement('a');a.href=URL.createObjectURL(dataUrlToBlob(url));a.download='VREEL_Desk_Setup.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}return url;}
-const lighting={
-  soft:{environment:'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/poly_haven_studio_1k.hdr',exposure:1.05,shadow:.85,softness:1},
-  day:{environment:'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/brown_photostudio_02_1k.hdr',exposure:1.28,shadow:1.35,softness:.72},
-  warm:{environment:'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/art_studio_1k.hdr',exposure:.96,shadow:1.15,softness:.82},
-  dramatic:{environment:'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/studio_small_06_1k.hdr',exposure:.72,shadow:2,softness:.28}
-};
-function applyLighting(){const p=lighting[state.light],level=state.lightLevel/100;viewer.environmentImage=p.environment;viewer.exposure=p.exposure*level;viewer.shadowIntensity=p.shadow;viewer.shadowSoftness=p.softness;viewer.removeAttribute('skybox-image');}
-document.querySelectorAll('[data-light]').forEach(b=>b.addEventListener('click',()=>{state.light=b.dataset.light;activate('[data-light]',b);applyLighting();}));
-document.querySelector('#light-level').addEventListener('input',e=>{state.lightLevel=Number(e.target.value);e.target.nextElementSibling.value=`${state.lightLevel}%`;applyLighting();});
-document.querySelector('[data-action="rotate"]').addEventListener('click',e=>{const on=!viewer.hasAttribute('auto-rotate');viewer.toggleAttribute('auto-rotate',on);e.currentTarget.setAttribute('aria-pressed',String(on));});
+viewer.environmentImage=studio.environment;viewer.exposure=studio.exposure;viewer.shadowIntensity=studio.shadow;viewer.shadowSoftness=studio.softness;
+document.querySelector('[data-action="rotate"]').addEventListener('click',e=>{const on=e.currentTarget.getAttribute('aria-pressed')!=='true';viewer.setAutoRotate(on);e.currentTarget.setAttribute('aria-pressed',String(on));});
+document.querySelector('#rotation-speed').addEventListener('input',e=>{viewer.setRotationSpeed(e.target.value);e.target.nextElementSibling.value=`${e.target.value}°/sn`;});
+viewer.setRotationSpeed(40);
+document.querySelector('[data-action="shadow"]').addEventListener('click',e=>{const enabled=e.currentTarget.getAttribute('aria-pressed')!=='true';viewer.shadowIntensity=enabled?studio.shadow:0;e.currentTarget.setAttribute('aria-pressed',String(enabled));});
+document.querySelector('[data-action="theme"]').addEventListener('click',e=>{const dark=e.currentTarget.getAttribute('aria-pressed')!=='true';viewer.parentElement.classList.toggle('dark-scene',dark);e.currentTarget.setAttribute('aria-pressed',String(dark));});
+document.querySelector('[data-action="fullscreen"]').addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await viewer.parentElement.requestFullscreen();}catch{notice.textContent='Tam ekran açılamadı.';}});
 document.querySelector('[data-action="reset"]').addEventListener('click',()=>{viewer.cameraOrbit='35deg 66deg auto';viewer.cameraTarget='auto auto auto';viewer.fieldOfView='auto';viewer.jumpCameraToGoal?.();});
 document.querySelector('[data-action="zoom-in"]').addEventListener('click',()=>{const o=viewer.getCameraOrbit();viewer.cameraOrbit=`${o.theta}rad ${o.phi}rad ${Math.max(o.radius*.82,.2)}m`;});
+document.querySelector('[data-action="zoom-out"]').addEventListener('click',()=>{const o=viewer.getCameraOrbit();viewer.cameraOrbit=`${o.theta}rad ${o.phi}rad ${o.radius*1.22}m`;});
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{const views={orbit:'35deg 66deg auto',front:'0deg 75deg auto',side:'90deg 75deg auto',top:'0deg 10deg auto'};viewer.cameraOrbit=views[b.dataset.view];viewer.jumpCameraToGoal?.();activate('[data-view]',b);}));
 document.querySelector('[data-action="snapshot"]').addEventListener('click',async e=>{e.currentTarget.disabled=true;try{await capturePng(true);notice.textContent='PNG görseli indirildi.';}catch{notice.textContent='Görsel oluşturulamadı. Lütfen tekrar deneyin.';}e.currentTarget.disabled=false;});
 
@@ -213,5 +229,26 @@ document.querySelector('#datasheet').addEventListener('click',async()=>{notice.t
 document.querySelector('#download-pdf').addEventListener('click',()=>pdfDocument?.save('VREEL_Desk_Setup.pdf'));
 document.querySelector('.modal-close').addEventListener('click',()=>document.querySelector('#pdf-modal').hidden=true);
 document.querySelector('#pdf-modal').addEventListener('click',e=>{if(e.target.id==='pdf-modal')e.currentTarget.hidden=true;});
-document.querySelector('#add').addEventListener('click',()=>notice.textContent='Ürün yapılandırması projeye eklendi.');
+document.querySelectorAll('.download-glb').forEach(button=>button.addEventListener('click',()=>{
+  if(!modelBlob){notice.textContent='Model henüz hazır değil.';return;}
+  const url=URL.createObjectURL(modelBlob),link=document.createElement('a');link.href=url;link.download='VREEL_Desk_Setup_Original.glb';link.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
+  notice.textContent='Orijinal GLB indirildi. Ekrandaki malzeme değişiklikleri bu dosyaya işlenmez.';
+}));
+const orderModal=document.querySelector('#order-modal');
+document.querySelector('#add').addEventListener('click',()=>{
+  document.querySelector('#order-summary').textContent=Object.keys(groups).map(key=>`${groups[key].label}: ${option(key).label}`).join(' · ');
+  orderModal.hidden=false;document.querySelector('#order-form [name="name"]').focus();
+});
+orderModal.querySelector('[data-close-order]').addEventListener('click',()=>orderModal.hidden=true);
+orderModal.addEventListener('click',e=>{if(e.target===orderModal)orderModal.hidden=true;});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')orderModal.hidden=true;});
+document.querySelectorAll('[data-order-tab]').forEach(button=>button.addEventListener('click',()=>{
+  activate('[data-order-tab]',button);
+  document.querySelector('#order-account-note').textContent=button.dataset.orderTab==='login'
+    ?'Giriş hizmeti henüz bağlı değil. Bu sayfa şifre istemez.'
+    :'Kayıt hizmeti henüz bağlı değil. Bilgileriniz hesap oluşturmaz.';
+}));
+document.querySelector('#order-form').addEventListener('submit',e=>{
+  e.preventDefault();document.querySelector('#order-status').textContent='Talep gönderilmedi: sipariş alıcısı ve üyelik hizmeti bağlanmalıdır.';
+});
 updateText();
