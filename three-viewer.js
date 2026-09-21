@@ -22,12 +22,18 @@ export function createViewer(element){
   controls.enableDamping=true;controls.dampingFactor=.08;
   controls.minPolarAngle=.1;controls.maxPolarAngle=Math.PI/2;
   controls.autoRotateSpeed=1.3;
-  const light=new THREE.DirectionalLight(0xffffff,6.7);
-  light.position.set(-4.35,1.74,8.75);light.castShadow=true;
+  // A high key light keeps the floor shadow close to the furniture.
+  const light=new THREE.DirectionalLight(0xfff8ef,4.4);
+  light.position.set(-2.8,11,4);light.castShadow=true;
   light.shadow.mapSize.set(mobile?1024:2048,mobile?1024:2048);light.shadow.bias=-.0003;
   light.shadow.camera.near=.1;light.shadow.camera.far=100;
-  light.shadow.radius=3;scene.add(light);
-  const ambient=new THREE.AmbientLight(0xffffff,.1);scene.add(ambient);
+  light.shadow.radius=4;scene.add(light);
+  // Studio fill lights illuminate the opposite faces without casting extra shadows.
+  const fill=new THREE.DirectionalLight(0xe9f1ff,1.7);
+  fill.position.set(5,5,-4);scene.add(fill);
+  const rim=new THREE.DirectionalLight(0xffffff,.65);
+  rim.position.set(1,7,5);scene.add(rim);
+  const ambient=new THREE.HemisphereLight(0xffffff,0xd7dce2,1.15);scene.add(ambient);
   let object=null,ground=null,materialAdapters=[],radius=3,baseRadius=3,environmentUrl='';
   const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
   const draco=new DRACOLoader();draco.setDecoderPath('vendor/addons/libs/draco/');
@@ -64,10 +70,10 @@ export function createViewer(element){
       const box=new THREE.Box3().setFromObject(object),dim=box.getSize(new THREE.Vector3());
       const center=box.getCenter(new THREE.Vector3());controls.target.copy(center);
       radius=Math.max(dim.length()*1.28,2);baseRadius=radius;camera.near=Math.max(.01,radius/1000);camera.far=radius*30;camera.updateProjectionMatrix();face();
-      light.target.position.copy(center);scene.add(light.target);
+      for(const studioLight of [light,fill,rim]){studioLight.target.position.copy(center);scene.add(studioLight.target);}
       const extent=Math.max(dim.x,dim.z)*1.65;
       light.shadow.camera.left=-extent;light.shadow.camera.right=extent;light.shadow.camera.top=extent;light.shadow.camera.bottom=-extent;light.shadow.camera.updateProjectionMatrix();
-      ground=new THREE.Mesh(new THREE.PlaneGeometry(extent*3,extent*3),new THREE.ShadowMaterial({opacity:.18}));
+      ground=new THREE.Mesh(new THREE.PlaneGeometry(extent*3,extent*3),new THREE.ShadowMaterial({opacity:.14}));
       ground.rotation.x=-Math.PI/2;ground.position.y=box.min.y-.012;ground.receiveShadow=true;scene.add(ground);
       element.dispatchEvent(new CustomEvent('progress',{detail:{totalProgress:1}}));
       element.dispatchEvent(new Event('load'));
@@ -78,7 +84,7 @@ export function createViewer(element){
     new RGBELoader().load(url,texture=>{
       if(url!==environmentUrl){texture.dispose();return;}
       texture.mapping=THREE.EquirectangularReflectionMapping;
-      const old=scene.environment;scene.environment=texture;scene.environmentIntensity=.3;scene.environmentRotation.y=THREE.MathUtils.degToRad(25);
+      const old=scene.environment;scene.environment=texture;scene.environmentIntensity=.55;scene.environmentRotation.y=THREE.MathUtils.degToRad(25);
       if(old)old.dispose();
     },undefined,error=>console.warn('Studio environment unavailable',error));
   }
