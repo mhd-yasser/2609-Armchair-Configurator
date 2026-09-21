@@ -207,7 +207,7 @@ document.querySelector('[data-action="rotate"]').addEventListener('click',e=>{co
 document.querySelector('#rotation-speed').addEventListener('input',e=>{viewer.setRotationSpeed(e.target.value);e.target.nextElementSibling.value=`${e.target.value}°/sn`;});
 viewer.setRotationSpeed(40);
 document.querySelector('[data-action="shadow"]').addEventListener('click',e=>{const enabled=e.currentTarget.getAttribute('aria-pressed')!=='true';viewer.shadowIntensity=enabled?studio.shadow:0;e.currentTarget.setAttribute('aria-pressed',String(enabled));});
-document.querySelector('[data-action="theme"]').addEventListener('click',e=>{const dark=e.currentTarget.getAttribute('aria-pressed')!=='true';viewer.parentElement.classList.toggle('dark-scene',dark);e.currentTarget.setAttribute('aria-pressed',String(dark));});
+document.querySelector('[data-action="theme"]').addEventListener('click',e=>{const dark=e.currentTarget.getAttribute('aria-pressed')!=='true';viewer.parentElement.classList.toggle('dark-scene',dark);viewer.sceneTheme=dark?'dark':'light';e.currentTarget.setAttribute('aria-pressed',String(dark));});
 document.querySelector('[data-action="fullscreen"]').addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await viewer.parentElement.requestFullscreen();}catch{notice.textContent='Tam ekran açılamadı.';}});
 document.querySelector('[data-action="reset"]').addEventListener('click',()=>{viewer.cameraOrbit='35deg 66deg auto';viewer.cameraTarget='auto auto auto';viewer.fieldOfView='auto';viewer.jumpCameraToGoal?.();});
 document.querySelector('[data-action="zoom-in"]').addEventListener('click',()=>{const o=viewer.getCameraOrbit();viewer.cameraOrbit=`${o.theta}rad ${o.phi}rad ${Math.max(o.radius*.82,.2)}m`;});
