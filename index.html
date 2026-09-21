@@ -6,7 +6,7 @@
   <meta name="description" content="VREEL interaktif yönetici masası yapılandırıcısı.">
   <title>VREEL | Yönetici Masası</title>
   <link rel="stylesheet" href="styles.css">
-  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js"></script>
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/addons/"}}</script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 </head>
 <body>
@@ -17,17 +17,13 @@
         <div class="product-mark"><strong>Yönetici Masası</strong><span>Hayal et. Yapılandır. Gerçekleştir.</span></div>
       </header>
 
-      <model-viewer id="product-viewer"
-        alt="Yapılandırılabilir yönetici masası ve koltuğu"
-        camera-controls shadow-intensity="1.2" shadow-softness=".9" exposure="1.05"
-        environment-image="https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/poly_haven_studio_1k.hdr"
-        tone-mapping="commerce" interaction-prompt="none"
-        camera-orbit="35deg 66deg auto" min-camera-orbit="auto 25deg auto" max-camera-orbit="auto 90deg auto">
+      <div id="product-viewer" role="img" aria-label="Yapılandırılabilir yönetici masası ve koltuğu">
         <div slot="progress-bar" class="progress"><span></span></div>
-      </model-viewer>
+      </div>
       <div id="model-loading" class="model-loading" role="status">3D model hazırlanıyor…</div>
 
       <div id="material-wheel" class="material-wheel" hidden role="group" aria-label="Malzeme seçenekleri">
+        <button id="wheel-drag" class="wheel-drag" type="button" aria-label="Malzeme çarkını taşı" title="Sürükleyerek taşı">⠿ Taşı</button>
         <div id="wheel-options" class="wheel-options"></div>
         <div class="wheel-core"><span>MALZEME</span><strong id="wheel-title"></strong><small id="wheel-current"></small><div class="wheel-pages" hidden><button id="wheel-prev" aria-label="Önceki seçenekler">‹</button><span id="wheel-page"></span><button id="wheel-next" aria-label="Sonraki seçenekler">›</button></div></div>
         <button id="wheel-close" class="wheel-close" aria-label="Malzeme çarkını kapat">×</button>
@@ -37,14 +33,19 @@
       <nav class="viewer-tools" aria-label="Kamera kontrolleri">
         <button data-view="orbit" class="active" title="Serbest görünüm">Yörünge</button>
         <button data-action="zoom-in" title="Yakınlaştır">Yakınlaştır</button>
+        <button data-action="zoom-out" title="Uzaklaştır">Uzaklaştır</button>
         <button data-action="reset" title="Görünümü sıfırla">Sıfırla</button>
         <button data-action="rotate" aria-pressed="false" title="Otomatik döndür">Otomatik Döndür</button>
+        <button data-action="shadow" aria-pressed="true" title="Gölgeyi aç veya kapat">Gölge</button>
+        <button data-action="theme" aria-pressed="false" title="Arka planı değiştir">Arka Plan</button>
+        <button data-action="fullscreen" title="Tam ekran">Tam Ekran</button>
         <i></i>
         <button data-view="front">Ön</button>
         <button data-view="side">Yan</button>
         <button data-view="top">Üst</button>
         <button data-action="snapshot" class="capture">Görsel Kaydet</button>
       </nav>
+      <label class="rotation-speed">Dönüş hızı <input id="rotation-speed" type="range" min="15" max="80" value="40"><output>40°/sn</output></label>
     </section>
 
     <aside class="product-panel">
@@ -62,25 +63,14 @@
       <section id="configure" class="tab-panel active">
         <div id="material-groups"></div>
 
-        <section class="general-settings">
-          <h2>GENEL AYARLAR</h2>
-          <div class="setting-grid lighting-only">
-            <div><h3>Aydınlatma Modu</h3><div class="finish-row compact wrap">
-              <button class="finish active" data-light="soft">Yumuşak Stüdyo</button>
-              <button class="finish" data-light="day">Pencere Işığı</button>
-              <button class="finish" data-light="warm">Sıcak İç Mekân</button>
-              <button class="finish" data-light="dramatic">Editoryal</button>
-            </div><label class="range">Işık Şiddeti <input id="light-level" type="range" min="40" max="140" value="100"><output>100%</output></label></div>
-          </div>
-        </section>
 
         <div class="summary"><span>Seçilen yüzeyler</span><strong id="selection"></strong></div>
         <div class="downloads">
           <button id="datasheet">Ürün Teknik Föyü</button>
-          <button disabled title="Yakında">2D Çizimi İndir</button>
-          <button disabled title="Yakında">3D Modeli İndir</button>
+          <button class="download-glb" type="button" title="Mevcut GLB modelini indirir; 2D çizim içermez">GLB Dosyasını İndir</button>
+          <button class="download-glb" type="button" title="Mevcut GLB modelini indirir; seçili malzemeleri içermez">3D Modeli İndir · GLB</button>
         </div>
-        <button id="add" class="primary">Projeye Ekle <span>→</span></button>
+        <button id="add" class="primary">Sipariş Ver <span>→</span></button>
         <p id="notice" class="notice" role="status"></p>
       </section>
 
@@ -101,6 +91,26 @@
 
   <div id="pdf-modal" class="modal" hidden>
     <div class="modal-card"><button class="modal-close" aria-label="Kapat">×</button><h2>Ürün Teknik Föyü</h2><p>Mevcut görünüm ve seçimlerle A4 teknik föy hazırlandı.</p><div id="pdf-preview"></div><button id="download-pdf" class="primary">PDF İndir</button></div>
+  </div>
+  <div id="order-modal" class="modal" hidden>
+    <div class="modal-card order-card" role="dialog" aria-modal="true" aria-labelledby="order-title">
+      <button class="modal-close" data-close-order aria-label="Kapat">×</button>
+      <h2 id="order-title">Sipariş Talebi</h2>
+      <p>Seçtiğiniz ürün için iletişim bilgilerinizi girin.</p>
+      <div class="order-tabs"><button type="button" data-order-tab="login">Giriş Yap</button><button type="button" data-order-tab="register" class="active">Kayıt Ol</button></div>
+      <p id="order-account-note" class="order-note">Üyelik ve sipariş gönderimi henüz bağlı değil. Bilgileriniz kaydedilmez.</p>
+      <form id="order-form">
+        <label>Ad Soyad <input name="name" autocomplete="name" required maxlength="100"></label>
+        <label>Şirket / Kurum <input name="company" autocomplete="organization" maxlength="120"></label>
+        <label>E-posta <input name="email" type="email" autocomplete="email" required maxlength="160"></label>
+        <label>Telefon <input name="phone" type="tel" autocomplete="tel" required maxlength="40"></label>
+        <label>Şehir / Ülke <input name="location" autocomplete="address-level2" maxlength="120"></label>
+        <label>Adet ve Notlar <textarea name="note" rows="3" maxlength="1000"></textarea></label>
+        <div class="order-summary" id="order-summary"></div>
+        <button class="primary" type="submit">Siparişi Gönder</button>
+        <p id="order-status" class="notice" role="status"></p>
+      </form>
+    </div>
   </div>
   <script type="module" src="app.js"></script>
 </body>
