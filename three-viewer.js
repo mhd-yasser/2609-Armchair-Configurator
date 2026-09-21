@@ -13,7 +13,7 @@ export function createViewer(element){
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure=1;
   renderer.shadowMap.enabled=true;
-  renderer.shadowMap.type=THREE.PCFShadowMap;
+  renderer.shadowMap.type=THREE.VSMShadowMap;
   const mobile=matchMedia('(max-width:700px)').matches;
   renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobile?1.5:2));
   renderer.domElement.setAttribute('aria-label',element.getAttribute('aria-label')||'3D ürün görünümü');
@@ -25,9 +25,11 @@ export function createViewer(element){
   // A high key light keeps the floor shadow close to the furniture.
   const light=new THREE.DirectionalLight(0xfff8ef,4.4);
   light.position.set(-2.8,11,4);light.castShadow=true;
-  light.shadow.mapSize.set(mobile?1024:2048,mobile?1024:2048);light.shadow.bias=-.0003;
+  light.shadow.mapSize.set(mobile?1024:2048,mobile?1024:2048);
+  light.shadow.bias=-.0001;light.shadow.normalBias=.003;
+  light.shadow.intensity=.72;light.shadow.blurSamples=8;
   light.shadow.camera.near=.1;light.shadow.camera.far=100;
-  light.shadow.radius=4;scene.add(light);
+  light.shadow.radius=5;scene.add(light);
   // Studio fill lights illuminate the opposite faces without casting extra shadows.
   const fill=new THREE.DirectionalLight(0xe9f1ff,1.7);
   fill.position.set(5,5,-4);scene.add(fill);
@@ -64,12 +66,8 @@ export function createViewer(element){
       if(ground){scene.remove(ground);ground.geometry.dispose();ground.material.dispose();}
       object=gltf.scene;scene.add(object);
       const materials=new Map();
-      object.traverse(node=>{if(!node.isMesh)return;node.castShadow=true;
-        const meshMaterials=[node.material].flat();
-        // The close headrest casts a hard, displaced shadow patch on the chair upholstery.
-        // Keep the chair casting onto the floor, but leave its fabric softly studio-lit.
-        node.receiveShadow=!meshMaterials.some(material=>material?.name==='VREEL_chairFabric');
-        for(const material of meshMaterials)if(material)materials.set(material.name,material);
+      object.traverse(node=>{if(!node.isMesh)return;node.castShadow=true;node.receiveShadow=true;
+        for(const material of [node.material].flat())if(material)materials.set(material.name,material);
       });
       materialAdapters=[...materials.values()].map(wrapMaterial);
       const box=new THREE.Box3().setFromObject(object),dim=box.getSize(new THREE.Vector3());
@@ -114,7 +112,7 @@ export function createViewer(element){
     exposure:{set:value=>renderer.toneMappingExposure=value},
     shadowIntensity:{set:value=>{light.castShadow=Number(value)>0;renderer.shadowMap.needsUpdate=true;}},
     sceneTheme:{set:value=>{darkScene=value==='dark';if(ground)ground.material.color.setHex(darkScene?0x343d49:0xe9edf0);}},
-    shadowSoftness:{set:value=>{light.shadow.radius=Math.max(1,Number(value)*4);light.shadow.needsUpdate=true;}},
+    shadowSoftness:{set:value=>{light.shadow.radius=Math.max(2.5,Number(value)*7);light.shadow.needsUpdate=true;}},
     cameraOrbit:{set(value){const [theta,phi,r]=value.split(' ');
       radius=r==='auto'?baseRadius:(parseFloat(r)||radius);
       const degrees=v=>v.endsWith('rad')?THREE.MathUtils.radToDeg(parseFloat(v)):parseFloat(v);
