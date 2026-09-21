@@ -13,7 +13,7 @@ export function createViewer(element){
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure=1;
   renderer.shadowMap.enabled=true;
-  renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type=THREE.PCFShadowMap;
   const mobile=matchMedia('(max-width:700px)').matches;
   renderer.setPixelRatio(Math.min(devicePixelRatio||1,mobile?1.5:2));
   renderer.domElement.setAttribute('aria-label',element.getAttribute('aria-label')||'3D ürün görünümü');
@@ -34,7 +34,7 @@ export function createViewer(element){
   const rim=new THREE.DirectionalLight(0xffffff,.65);
   rim.position.set(1,7,5);scene.add(rim);
   const ambient=new THREE.HemisphereLight(0xffffff,0xd7dce2,1.15);scene.add(ambient);
-  let object=null,ground=null,groundShadow=null,materialAdapters=[],radius=3,baseRadius=3,environmentUrl='',darkScene=false;
+  let object=null,ground=null,materialAdapters=[],radius=3,baseRadius=3,environmentUrl='',darkScene=false;
   const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
   const draco=new DRACOLoader();draco.setDecoderPath('vendor/addons/libs/draco/');
   const loader=new GLTFLoader();loader.setDRACOLoader(draco);
@@ -62,7 +62,6 @@ export function createViewer(element){
       const gltf=await new Promise((resolve,reject)=>loader.parse(bytes,'',resolve,reject));
       if(object)scene.remove(object);
       if(ground){scene.remove(ground);ground.geometry.dispose();ground.material.dispose();}
-      if(groundShadow){scene.remove(groundShadow);groundShadow.geometry.dispose();groundShadow.material.dispose();}
       object=gltf.scene;scene.add(object);
       const materials=new Map();
       object.traverse(node=>{if(!node.isMesh)return;node.castShadow=true;node.receiveShadow=true;
@@ -76,10 +75,10 @@ export function createViewer(element){
       const extent=Math.max(dim.x,dim.z)*1.65;
       light.shadow.camera.left=-extent;light.shadow.camera.right=extent;light.shadow.camera.top=extent;light.shadow.camera.bottom=-extent;light.shadow.camera.updateProjectionMatrix();
       const floorSize=extent*30;
-      ground=new THREE.Mesh(new THREE.PlaneGeometry(floorSize,floorSize),new THREE.MeshBasicMaterial({color:darkScene?0x343d49:0xe9edf0}));
-      ground.rotation.x=-Math.PI/2;ground.position.y=box.min.y-.016;scene.add(ground);
-      groundShadow=new THREE.Mesh(new THREE.PlaneGeometry(floorSize,floorSize),new THREE.ShadowMaterial({opacity:.14}));
-      groundShadow.rotation.x=-Math.PI/2;groundShadow.position.y=box.min.y-.014;groundShadow.receiveShadow=true;scene.add(groundShadow);
+      // One opaque floor receives the shadow directly; layered transparent planes
+      // can produce overlapping patches and depth artifacts around the furniture.
+      ground=new THREE.Mesh(new THREE.PlaneGeometry(floorSize,floorSize),new THREE.MeshStandardMaterial({color:darkScene?0x343d49:0xe9edf0,roughness:1,metalness:0}));
+      ground.rotation.x=-Math.PI/2;ground.position.y=box.min.y-.012;ground.receiveShadow=true;scene.add(ground);
       element.dispatchEvent(new CustomEvent('progress',{detail:{totalProgress:1}}));
       element.dispatchEvent(new Event('load'));
     }catch(err){console.error(err);element.dispatchEvent(new Event('error'));}
@@ -109,7 +108,7 @@ export function createViewer(element){
     model:{get:()=>object?{materials:materialAdapters}:null},
     environmentImage:{set:environment},
     exposure:{set:value=>renderer.toneMappingExposure=value},
-    shadowIntensity:{set:value=>{light.castShadow=Number(value)>0;if(groundShadow)groundShadow.visible=Number(value)>0;renderer.shadowMap.needsUpdate=true;}},
+    shadowIntensity:{set:value=>{light.castShadow=Number(value)>0;renderer.shadowMap.needsUpdate=true;}},
     sceneTheme:{set:value=>{darkScene=value==='dark';if(ground)ground.material.color.setHex(darkScene?0x343d49:0xe9edf0);}},
     shadowSoftness:{set:value=>{light.shadow.radius=Math.max(1,Number(value)*4);light.shadow.needsUpdate=true;}},
     cameraOrbit:{set(value){const [theta,phi,r]=value.split(' ');
