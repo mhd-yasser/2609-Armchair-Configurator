@@ -252,9 +252,14 @@ document.querySelector('[data-action="snapshot"]').addEventListener('click',asyn
 document.querySelector('[data-action="snapshot-4k"]').addEventListener('click',async e=>{e.currentTarget.disabled=true;try{await capturePng(true,true);notice.textContent='4K PNG indirildi.';}catch{notice.textContent='4K görüntü oluşturulamadı. Cihazınızın grafik belleği yetersiz olabilir.';}e.currentTarget.disabled=false;});
 const dimensionOverlay=document.querySelector('#dimensions-overlay');
 document.querySelector('[data-action="dimensions"]').addEventListener('click',e=>{dimensionOverlay.hidden=!dimensionOverlay.hidden;e.currentTarget.setAttribute('aria-pressed',String(!dimensionOverlay.hidden));});
-function updateDimensions(){if(!dimensionOverlay.hidden){const labels=viewer.getDimensionLabels();
-  if(labels){if(dimensionOverlay.children.length!==labels.length){dimensionOverlay.replaceChildren(...labels.map(()=>document.createElement('span')));}
-    labels.forEach(({label,x,y},index)=>{const tag=dimensionOverlay.children[index];tag.textContent=label;tag.style.left=`${Math.max(25,Math.min(viewer.clientWidth-25,x))}px`;tag.style.top=`${Math.max(80,Math.min(viewer.clientHeight-60,y))}px`;});}
+function updateDimensions(){if(!dimensionOverlay.hidden){const guides=viewer.getMeasurementGuides();
+  if(guides){if(dimensionOverlay.querySelectorAll('span').length!==guides.length){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('aria-hidden','true');
+      dimensionOverlay.replaceChildren(svg,...guides.map(()=>document.createElement('span')));}
+    const svg=dimensionOverlay.querySelector('svg');svg.setAttribute('viewBox',`0 0 ${viewer.clientWidth} ${viewer.clientHeight}`);
+    svg.replaceChildren(...guides.flatMap(({start,end,offset})=>{const a={x:start.x+offset.x,y:start.y+offset.y},b={x:end.x+offset.x,y:end.y+offset.y};
+      return [[a,b,'measure-main'],[start,a,'measure-witness'],[end,b,'measure-witness']].map(([p,q,kind])=>{
+        const line=document.createElementNS('http://www.w3.org/2000/svg','line');line.setAttribute('x1',p.x);line.setAttribute('y1',p.y);line.setAttribute('x2',q.x);line.setAttribute('y2',q.y);line.setAttribute('class',kind);return line;});}));
+    guides.forEach(({label,start,end,offset},i)=>{const tag=dimensionOverlay.querySelectorAll('span')[i];tag.textContent=label;tag.style.left=`${Math.max(30,Math.min(viewer.clientWidth-30,(start.x+end.x)/2+offset.x))}px`;tag.style.top=`${Math.max(80,Math.min(viewer.clientHeight-58,(start.y+end.y)/2+offset.y))}px`;});}
   else dimensionOverlay.textContent='Model henüz yüklenmedi.';}requestAnimationFrame(updateDimensions);}requestAnimationFrame(updateDimensions);
 
 let pdfDocument=null,pdfPreviewUrl='';
