@@ -27,3 +27,15 @@ filters.forEach(button => button.addEventListener('click', () => {
   refresh();
 }));
 search.addEventListener('input', refresh);
+
+document.querySelector('#add-product')?.addEventListener('click', () => {
+  const notice = document.createElement('div');
+  notice.className = 'workspace-notice';
+  notice.textContent = 'Yeni ürün ekleme akışı yakında hazır olacak.';
+  document.body.append(notice);
+  requestAnimationFrame(() => notice.classList.add('visible'));
+  setTimeout(() => {
+    notice.classList.remove('visible');
+    setTimeout(() => notice.remove(), 220);
+  }, 2600);
+});
