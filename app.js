@@ -257,6 +257,23 @@ document.querySelectorAll('.download-glb').forEach(button=>button.addEventListen
   const url=URL.createObjectURL(modelBlob),link=document.createElement('a');link.href=url;link.download='VREEL_Desk_Setup_Original.glb';link.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
   notice.textContent='Orijinal GLB indirildi. Ekrandaki malzeme değişiklikleri bu dosyaya işlenmez.';
 }));
+const sourceModal=document.querySelector('#source-modal');
+const sourceFiles={dwg:'downloads/Desk-Setup.dwg',max:'downloads/Desk-Setup.max',fbx:'downloads/Desk-Setup.fbx'};
+document.querySelector('#source-download').addEventListener('click',()=>{sourceModal.hidden=false;document.querySelector('#source-form [name="company"]').focus();});
+sourceModal.querySelector('[data-close-source]').addEventListener('click',()=>sourceModal.hidden=true);
+sourceModal.addEventListener('click',e=>{if(e.target===sourceModal)sourceModal.hidden=true;});
+document.querySelector('#source-form').addEventListener('submit',e=>{
+  e.preventDefault();document.querySelector('#source-downloads').hidden=false;
+  document.querySelector('#source-status').textContent='Dosya türünü seçin. Bilgileriniz gönderilmedi.';
+});
+document.querySelectorAll('[data-source-format]').forEach(button=>button.addEventListener('click',async()=>{
+  const format=button.dataset.sourceFormat,url=sourceFiles[format],status=document.querySelector('#source-status');
+  button.disabled=true;status.textContent='Dosya kontrol ediliyor…';
+  try{const response=await fetch(url,{method:'HEAD'});if(!response.ok||!response.headers.get('content-type')?.includes('application')&&response.headers.get('content-type')?.includes('text/html'))throw Error('unavailable');
+    const link=document.createElement('a');link.href=url;link.download=url.split('/').pop();link.click();status.textContent=`${format.toUpperCase()} indirmesi başladı.`;
+  }catch{status.textContent=`${format.toUpperCase()} dosyası henüz hazır değil.`;}
+  button.disabled=false;
+}));
 const orderModal=document.querySelector('#order-modal');
 document.querySelector('#add').addEventListener('click',()=>{
   document.querySelector('#order-summary').textContent=Object.keys(groups).map(key=>`${groups[key].label}: ${option(key).label}`).join(' · ');
@@ -264,7 +281,7 @@ document.querySelector('#add').addEventListener('click',()=>{
 });
 orderModal.querySelector('[data-close-order]').addEventListener('click',()=>orderModal.hidden=true);
 orderModal.addEventListener('click',e=>{if(e.target===orderModal)orderModal.hidden=true;});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')orderModal.hidden=true;});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){orderModal.hidden=true;sourceModal.hidden=true;}});
 document.querySelectorAll('[data-order-tab]').forEach(button=>button.addEventListener('click',()=>{
   activate('[data-order-tab]',button);
   document.querySelector('#order-account-note').textContent=button.dataset.orderTab==='login'

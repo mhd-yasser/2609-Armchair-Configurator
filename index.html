@@ -73,7 +73,7 @@
         <div class="downloads">
           <button id="datasheet">Ürün Teknik Föyü</button>
           <button class="download-glb" type="button" title="Mevcut GLB modelini indirir; 2D çizim içermez">GLB Dosyasını İndir</button>
-          <button class="download-glb" type="button" title="Mevcut GLB modelini indirir; seçili malzemeleri içermez">3D Modeli İndir · GLB</button>
+          <button id="source-download" type="button">Kaynak Dosyaları İndir</button>
         </div>
         <button id="add" class="primary">Sipariş Ver <span>→</span></button>
         <p id="notice" class="notice" role="status"></p>
@@ -115,6 +115,25 @@
         <button class="primary" type="submit">Siparişi Gönder</button>
         <p id="order-status" class="notice" role="status"></p>
       </form>
+    </div>
+  </div>
+  <div id="source-modal" class="modal" hidden>
+    <div class="modal-card source-card" role="dialog" aria-modal="true" aria-labelledby="source-title">
+      <button type="button" class="modal-close" data-close-source aria-label="Kapat">×</button>
+      <h2 id="source-title">Kaynak Dosyalarını İndir</h2>
+      <p>Şirket bilgilerinizi doğrulayın ve indirmek istediğiniz dosya türünü seçin. Bu form şu anda bilgilerinizi göndermez veya kaydetmez.</p>
+      <form id="source-form">
+        <label>Şirket adı <input name="company" autocomplete="organization" placeholder="Şirket adınız" required maxlength="120"></label>
+        <label>Şirket türü <select name="type" required><option value="Mimarlık ofisi" selected>Mimarlık ofisi</option><option value="İç mimarlık firması">İç mimarlık firması</option><option value="Gayrimenkul geliştiricisi">Gayrimenkul geliştiricisi</option><option value="Mobilya üreticisi">Mobilya üreticisi</option><option value="Diğer">Diğer</option></select></label>
+        <label>E-posta <input name="email" type="email" autocomplete="email" placeholder="ad@firma.com" required maxlength="160"></label>
+        <label>Telefon / WhatsApp <input name="phone" type="tel" autocomplete="tel" placeholder="+90 …" required maxlength="40"></label>
+        <button class="primary" type="submit">Bilgileri Onayla</button>
+      </form>
+      <div id="source-downloads" hidden>
+        <p class="source-note">Dosyalar henüz yüklenmedi. Hazır olan türler burada indirilebilir.</p>
+        <div class="source-actions"><button type="button" data-source-format="dwg">DWG İndir</button><button type="button" data-source-format="max">3ds Max İndir</button><button type="button" data-source-format="fbx">FBX İndir</button></div>
+        <p id="source-status" class="notice" role="status"></p>
+      </div>
     </div>
   </div>
   <script type="module" src="app.js"></script>
