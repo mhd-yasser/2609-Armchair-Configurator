@@ -49,3 +49,4 @@
 .downloads{grid-template-columns:repeat(3,minmax(0,1fr))}.confirm-actions{display:flex;gap:10px;justify-content:flex-end}.confirm-actions button{width:auto;min-width:120px;min-height:42px;padding:0 14px;border:1px solid var(--line);border-radius:7px;background:white;cursor:pointer}.confirm-actions .primary{margin:0;border:0;background:var(--navy)}
 @media(max-width:900px){.viewer-utilities{top:66px;right:10px}.viewer-panel .lighting-presets{top:121px;right:10px}.dimensions-overlay{top:120px;left:12px}.viewer-tools{max-width:96vw}}
 @media(max-width:500px){.viewer-tools button{min-width:35px;padding:0 6px}.downloads{grid-template-columns:1fr}}
+.icon-defs{position:absolute;width:0;height:0;overflow:hidden}.viewer-utilities svg,.viewer-tools svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}

@@ -10,6 +10,22 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 </head>
 <body>
+  <svg class="icon-defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="ico-camera" viewBox="0 0 24 24"><path d="M4 7h4l2-2h4l2 2h4v12H4z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+    <symbol id="ico-measure" viewBox="0 0 24 24"><path d="m3 16 13-13 5 5L8 21zM11 8l2 2m-5 1 2 2m-5 1 2 2"/></symbol>
+    <symbol id="ico-expand" viewBox="0 0 24 24"><path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6"/></symbol>
+    <symbol id="ico-collapse" viewBox="0 0 24 24"><path d="M3 9h6V3m12 6h-6V3M3 15h6v6m12-6h-6v6"/></symbol>
+    <symbol id="ico-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></symbol>
+    <symbol id="ico-rotate" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2 6M20 5v6h-6"/></symbol>
+    <symbol id="ico-plus" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="M10 7v6m-3-3h6m1.5 4.5L21 21"/></symbol>
+    <symbol id="ico-minus" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="M7 10h6m1.5 4.5L21 21"/></symbol>
+    <symbol id="ico-left" viewBox="0 0 24 24"><path d="M20 12H4m7-7-7 7 7 7"/></symbol>
+    <symbol id="ico-right" viewBox="0 0 24 24"><path d="M4 12h16m-7-7 7 7-7 7"/></symbol>
+    <symbol id="ico-reset" viewBox="0 0 24 24"><path d="M4 9V4h5M4 9a8 8 0 1 1 0 6"/></symbol>
+    <symbol id="ico-front" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M4 10h16"/></symbol>
+    <symbol id="ico-side" viewBox="0 0 24 24"><path d="M5 5h14v14H5zM12 5v14"/></symbol>
+    <symbol id="ico-top" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16m-10 0v10"/></symbol>
+  </svg>
   <main class="configurator">
     <section class="viewer-panel" aria-label="Etkileşimli 3B ürün görünümü">
       <header class="topbar">
@@ -30,10 +46,10 @@
       </div>
       <p class="viewer-hint">Malzeme seçmek için parçaya dokunun. Döndürmek için sürükleyin.</p>
       <div class="viewer-utilities" role="group" aria-label="Görünüm araçları">
-        <button type="button" data-action="snapshot" title="Görüntü kaydet" aria-label="Görüntü kaydet">▣</button>
+        <button type="button" data-action="snapshot" title="Görüntü kaydet" aria-label="Görüntü kaydet"><svg><use href="#ico-camera"/></svg></button>
         <button type="button" data-action="snapshot-4k" title="4K görüntü kaydet" aria-label="4K görüntü kaydet">4K</button>
-        <button type="button" data-action="dimensions" aria-pressed="false" title="Ölçüleri göster" aria-label="Ölçüleri göster">⌁</button>
-        <button type="button" data-action="fullscreen" title="Tam ekran" aria-label="Tam ekran">⛶</button>
+        <button type="button" data-action="dimensions" aria-pressed="false" title="Ölçüleri göster" aria-label="Ölçüleri göster"><svg><use href="#ico-measure"/></svg></button>
+        <button type="button" data-action="fullscreen" title="Tam ekran" aria-label="Tam ekran"><svg><use href="#ico-expand"/></svg></button>
       </div>
       <div id="dimensions-overlay" class="dimensions-overlay" hidden aria-live="polite"></div>
       <div class="lighting-presets" role="group" aria-label="Aydınlatma modu" hidden>
@@ -43,17 +59,17 @@
       </div>
 
       <nav class="viewer-tools" aria-label="Kamera kontrolleri">
-        <button data-action="lighting-menu" title="Aydınlatma" aria-label="Aydınlatma">☼</button>
-        <button data-action="rotate" aria-pressed="false" title="Otomatik döndür" aria-label="Otomatik döndür">⟳</button>
-        <button data-action="zoom-in" title="Yakınlaştır" aria-label="Yakınlaştır">＋</button>
-        <button data-action="zoom-out" title="Uzaklaştır" aria-label="Uzaklaştır">−</button>
-        <button data-action="pan-left" title="Sola kaydır" aria-label="Sola kaydır">←</button>
-        <button data-action="pan-right" title="Sağa kaydır" aria-label="Sağa kaydır">→</button>
-        <button data-action="reset" title="Kamera açısını sıfırla" aria-label="Kamera açısını sıfırla">⟲</button>
+        <button data-action="lighting-menu" title="Aydınlatma" aria-label="Aydınlatma"><svg><use href="#ico-sun"/></svg></button>
+        <button data-action="rotate" aria-pressed="false" title="Otomatik döndür" aria-label="Otomatik döndür"><svg><use href="#ico-rotate"/></svg></button>
+        <button data-action="zoom-in" title="Yakınlaştır" aria-label="Yakınlaştır"><svg><use href="#ico-plus"/></svg></button>
+        <button data-action="zoom-out" title="Uzaklaştır" aria-label="Uzaklaştır"><svg><use href="#ico-minus"/></svg></button>
+        <button data-action="pan-left" title="Sola kaydır" aria-label="Sola kaydır"><svg><use href="#ico-left"/></svg></button>
+        <button data-action="pan-right" title="Sağa kaydır" aria-label="Sağa kaydır"><svg><use href="#ico-right"/></svg></button>
+        <button data-action="reset" title="Kamera açısını sıfırla" aria-label="Kamera açısını sıfırla"><svg><use href="#ico-reset"/></svg></button>
         <i></i>
-        <button data-view="front" title="Ön görünüş" aria-label="Ön görünüş">▤</button>
-        <button data-view="side" title="Yan görünüş" aria-label="Yan görünüş">◧</button>
-        <button data-view="top" title="Üst görünüş" aria-label="Üst görünüş">▦</button>
+        <button data-view="front" title="Ön görünüş" aria-label="Ön görünüş"><svg><use href="#ico-front"/></svg></button>
+        <button data-view="side" title="Yan görünüş" aria-label="Yan görünüş"><svg><use href="#ico-side"/></svg></button>
+        <button data-view="top" title="Üst görünüş" aria-label="Üst görünüş"><svg><use href="#ico-top"/></svg></button>
       </nav>
       <label class="rotation-speed">Dönüş hızı <input id="rotation-speed" type="range" min="15" max="80" value="40"><output>40°/sn</output></label>
     </section>
