@@ -6,6 +6,11 @@ const wheel = document.querySelector('#material-wheel');
 const wheelOptions = document.querySelector('#wheel-options');
 const groupContainer = document.querySelector('#material-groups');
 const detailsContainer = document.querySelector('#material-details');
+// A future product dashboard can set these flags before app.js loads.
+const viewerFeatures={screenshot:true,screenshot4K:true,fullscreen:true,dimensions:true,ar:false,...window.VREEL_VIEWER_FEATURES};
+for(const [feature,action] of Object.entries({screenshot:'snapshot',screenshot4K:'snapshot-4k',fullscreen:'fullscreen',dimensions:'dimensions'})){
+  if(!viewerFeatures[feature])document.querySelector(`[data-action="${action}"]`)?.setAttribute('hidden','');
+}
 
 const wood = [
   {id:'original',label:'Mevcut Ahşap',color:'#a98061',original:true},
@@ -220,23 +225,37 @@ loadModel();
 document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{activate('.tab',b);document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id===b.dataset.tab));}));
 function cleanCapture(){const wasOpen=!wheel.hidden;wheel.hidden=true;return new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve(wasOpen))));}
 function dataUrlToBlob(url){const [meta,data]=url.split(',');const mime=meta.match(/:(.*?);/)[1];const bytes=atob(data);const arr=new Uint8Array(bytes.length);for(let i=0;i<bytes.length;i++)arr[i]=bytes.charCodeAt(i);return new Blob([arr],{type:mime});}
-async function capturePng(download=true){const wheelWas=await cleanCapture();const url=await viewer.toDataURL('image/png',1);wheel.hidden=!wheelWas;if(download){const a=document.createElement('a');a.href=URL.createObjectURL(dataUrlToBlob(url));a.download='VREEL_Desk_Setup.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}return url;}
+async function capturePng(download=true,highResolution=false){const wheelWas=await cleanCapture();let url;
+  try{url=highResolution?viewer.to4KDataURL():viewer.toDataURL('image/png',1);}finally{wheel.hidden=!wheelWas;}
+  if(download){const a=document.createElement('a');a.href=URL.createObjectURL(dataUrlToBlob(url));a.download=`VREEL_Desk_Setup${highResolution?'_4K':''}.png`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}return url;}
 viewer.environmentImage=studio.environment;viewer.exposure=studio.exposure;viewer.shadowIntensity=studio.shadow;viewer.shadowSoftness=studio.softness;
 document.querySelector('[data-action="rotate"]').addEventListener('click',e=>{const on=e.currentTarget.getAttribute('aria-pressed')!=='true';viewer.setAutoRotate(on);e.currentTarget.setAttribute('aria-pressed',String(on));});
 document.querySelector('#rotation-speed').addEventListener('input',e=>{viewer.setRotationSpeed(e.target.value);e.target.nextElementSibling.value=`${e.target.value}°/sn`;});
 viewer.setRotationSpeed(40);
-document.querySelector('[data-action="shadow"]').addEventListener('click',e=>{const enabled=e.currentTarget.getAttribute('aria-pressed')!=='true';viewer.shadowIntensity=enabled?studio.shadow:0;e.currentTarget.setAttribute('aria-pressed',String(enabled));});
 document.querySelectorAll('[data-lighting]').forEach(button=>button.addEventListener('click',()=>{
   viewer.lightingPreset=button.dataset.lighting;
   document.querySelectorAll('[data-lighting]').forEach(option=>option.setAttribute('aria-pressed',String(option===button)));
 }));
-document.querySelector('[data-action="theme"]').addEventListener('click',e=>{const dark=e.currentTarget.getAttribute('aria-pressed')!=='true';viewer.parentElement.classList.toggle('dark-scene',dark);viewer.sceneTheme=dark?'dark':'light';e.currentTarget.setAttribute('aria-pressed',String(dark));});
-document.querySelector('[data-action="fullscreen"]').addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await viewer.parentElement.requestFullscreen();}catch{notice.textContent='Tam ekran açılamadı.';}});
+const lightingMenu=document.querySelector('.lighting-presets');
+document.querySelector('[data-action="lighting-menu"]').addEventListener('click',()=>{lightingMenu.hidden=!lightingMenu.hidden;});
+document.addEventListener('click',e=>{if(!e.target.closest('.lighting-presets,[data-action="lighting-menu"]'))lightingMenu.hidden=true;});
+const fullscreenButton=document.querySelector('[data-action="fullscreen"]');
+fullscreenButton.addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await viewer.parentElement.requestFullscreen();}catch{notice.textContent='Tam ekran açılamadı.';}});
+document.addEventListener('fullscreenchange',()=>{const active=Boolean(document.fullscreenElement);fullscreenButton.textContent=active?'↙':'⛶';fullscreenButton.title=active?'Tam ekrandan çık':'Tam ekran';fullscreenButton.setAttribute('aria-label',fullscreenButton.title);fullscreenButton.classList.toggle('active',active);});
 document.querySelector('[data-action="reset"]').addEventListener('click',()=>{viewer.cameraOrbit='35deg 66deg auto';viewer.cameraTarget='auto auto auto';viewer.fieldOfView='auto';viewer.jumpCameraToGoal?.();});
 document.querySelector('[data-action="zoom-in"]').addEventListener('click',()=>{const o=viewer.getCameraOrbit();viewer.cameraOrbit=`${o.theta}rad ${o.phi}rad ${Math.max(o.radius*.82,.2)}m`;});
 document.querySelector('[data-action="zoom-out"]').addEventListener('click',()=>{const o=viewer.getCameraOrbit();viewer.cameraOrbit=`${o.theta}rad ${o.phi}rad ${o.radius*1.22}m`;});
+document.querySelector('[data-action="pan-left"]').addEventListener('click',()=>viewer.panView(-1));
+document.querySelector('[data-action="pan-right"]').addEventListener('click',()=>viewer.panView(1));
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{const views={orbit:'35deg 66deg auto',front:'0deg 75deg auto',side:'90deg 75deg auto',top:'0deg 10deg auto'};viewer.cameraOrbit=views[b.dataset.view];viewer.jumpCameraToGoal?.();activate('[data-view]',b);}));
 document.querySelector('[data-action="snapshot"]').addEventListener('click',async e=>{e.currentTarget.disabled=true;try{await capturePng(true);notice.textContent='PNG görseli indirildi.';}catch{notice.textContent='Görsel oluşturulamadı. Lütfen tekrar deneyin.';}e.currentTarget.disabled=false;});
+document.querySelector('[data-action="snapshot-4k"]').addEventListener('click',async e=>{e.currentTarget.disabled=true;try{await capturePng(true,true);notice.textContent='4K PNG indirildi.';}catch{notice.textContent='4K görüntü oluşturulamadı. Cihazınızın grafik belleği yetersiz olabilir.';}e.currentTarget.disabled=false;});
+const dimensionOverlay=document.querySelector('#dimensions-overlay');
+document.querySelector('[data-action="dimensions"]').addEventListener('click',e=>{dimensionOverlay.hidden=!dimensionOverlay.hidden;e.currentTarget.setAttribute('aria-pressed',String(!dimensionOverlay.hidden));});
+function updateDimensions(){if(!dimensionOverlay.hidden){const labels=viewer.getDimensionLabels();
+  if(labels){if(dimensionOverlay.children.length!==labels.length){dimensionOverlay.replaceChildren(...labels.map(()=>document.createElement('span')));}
+    labels.forEach(({label,x,y},index)=>{const tag=dimensionOverlay.children[index];tag.textContent=label;tag.style.left=`${Math.max(25,Math.min(viewer.clientWidth-25,x))}px`;tag.style.top=`${Math.max(80,Math.min(viewer.clientHeight-60,y))}px`;});}
+  else dimensionOverlay.textContent='Model henüz yüklenmedi.';}requestAnimationFrame(updateDimensions);}requestAnimationFrame(updateDimensions);
 
 let pdfDocument=null,pdfPreviewUrl='';
 async function makePdf(){
@@ -252,11 +271,11 @@ document.querySelector('#datasheet').addEventListener('click',async()=>{notice.t
 document.querySelector('#download-pdf').addEventListener('click',()=>pdfDocument?.save('VREEL_Desk_Setup.pdf'));
 document.querySelector('.modal-close').addEventListener('click',()=>document.querySelector('#pdf-modal').hidden=true);
 document.querySelector('#pdf-modal').addEventListener('click',e=>{if(e.target.id==='pdf-modal')e.currentTarget.hidden=true;});
-document.querySelectorAll('.download-glb').forEach(button=>button.addEventListener('click',()=>{
-  if(!modelBlob){notice.textContent='Model henüz hazır değil.';return;}
-  const url=URL.createObjectURL(modelBlob),link=document.createElement('a');link.href=url;link.download='VREEL_Desk_Setup_Original.glb';link.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
-  notice.textContent='Orijinal GLB indirildi. Ekrandaki malzeme değişiklikleri bu dosyaya işlenmez.';
-}));
+const resetModal=document.querySelector('#reset-modal');
+document.querySelector('#reset-materials').addEventListener('click',()=>resetModal.hidden=false);
+document.querySelector('#cancel-reset').addEventListener('click',()=>resetModal.hidden=true);
+resetModal.addEventListener('click',e=>{if(e.target===resetModal)resetModal.hidden=true;});
+document.querySelector('#confirm-reset').addEventListener('click',()=>{for(const [key,group] of Object.entries(groups))choose(key,group.initial);resetModal.hidden=true;notice.textContent='Malzemeler varsayılan seçeneklere döndü.';});
 const sourceModal=document.querySelector('#source-modal');
 const sourceFiles={dwg:'downloads/Desk-Setup.dwg',max:'downloads/Desk-Setup.max',fbx:'downloads/Desk-Setup.fbx'};
 document.querySelector('#source-download').addEventListener('click',()=>{sourceModal.hidden=false;document.querySelector('#source-form [name="company"]').focus();});
@@ -281,7 +300,7 @@ document.querySelector('#add').addEventListener('click',()=>{
 });
 orderModal.querySelector('[data-close-order]').addEventListener('click',()=>orderModal.hidden=true);
 orderModal.addEventListener('click',e=>{if(e.target===orderModal)orderModal.hidden=true;});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){orderModal.hidden=true;sourceModal.hidden=true;}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){orderModal.hidden=true;sourceModal.hidden=true;resetModal.hidden=true;lightingMenu.hidden=true;}});
 document.querySelectorAll('[data-order-tab]').forEach(button=>button.addEventListener('click',()=>{
   activate('[data-order-tab]',button);
   document.querySelector('#order-account-note').textContent=button.dataset.orderTab==='login'

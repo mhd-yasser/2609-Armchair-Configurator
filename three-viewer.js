@@ -137,6 +137,16 @@ export function createViewer(element){
   element.createTexture=(url)=>new Promise((resolve,reject)=>textureLoader.load(url,texture=>{texture.colorSpace=THREE.SRGBColorSpace;texture.flipY=false;resolve(texture);},undefined,reject));
   element.requestUpdate=()=>renderer.render(scene,camera);
   element.toDataURL=()=>{renderer.render(scene,camera);return renderer.domElement.toDataURL('image/png');};
+  element.to4KDataURL=()=>{const width=3840,height=2160,oldSize=renderer.getSize(new THREE.Vector2()),oldRatio=renderer.getPixelRatio(),oldAspect=camera.aspect;
+    try{renderer.setPixelRatio(1);renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();renderer.render(scene,camera);return renderer.domElement.toDataURL('image/png');}
+    finally{renderer.setPixelRatio(oldRatio);renderer.setSize(oldSize.x,oldSize.y,false);camera.aspect=oldAspect;camera.updateProjectionMatrix();}}
+  element.panView=direction=>{const right=new THREE.Vector3().setFromMatrixColumn(camera.matrix,0);const amount=radius*.08*direction;camera.position.addScaledVector(right,amount);controls.target.addScaledVector(right,amount);controls.update();};
+  element.getDimensions=()=>{if(!object)return null;const box=new THREE.Box3().setFromObject(object),d=box.getSize(new THREE.Vector3());return {width:d.x,depth:d.z,height:d.y};};
+  element.getDimensionLabels=()=>{if(!object)return null;const box=new THREE.Box3().setFromObject(object),d=box.getSize(new THREE.Vector3());
+    const point=(x,y,z)=>{const p=new THREE.Vector3(x,y,z).project(camera);return {x:(p.x+1)*element.clientWidth/2,y:(1-p.y)*element.clientHeight/2};};
+    return [{label:`G ${Math.round(d.x*100)} cm`,...point((box.min.x+box.max.x)/2,box.min.y,box.max.z)},
+      {label:`D ${Math.round(d.z*100)} cm`,...point(box.max.x,box.min.y,(box.min.z+box.max.z)/2)},
+      {label:`Y ${Math.round(d.y*100)} cm`,...point(box.max.x,(box.min.y+box.max.y)/2,box.max.z)}];};
   element.setRotationSpeed=value=>{element.dataset.rotationSpeed=value;};
   element.setAutoRotate=value=>{controls.autoRotate=value;};
   return element;
