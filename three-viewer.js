@@ -46,7 +46,7 @@ export function createViewer(element){
     light.position.set(...p.position);light.shadow.intensity=p.shadow;light.castShadow=shadowsEnabled;
     renderer.toneMappingExposure=p.exposure;scene.environmentIntensity=p.environment;renderer.shadowMap.needsUpdate=true;
   }
-  let object=null,ground=null,materialAdapters=[],radius=3,baseRadius=3,environmentUrl='',darkScene=false;
+  let object=null,ground=null,materialAdapters=[],radius=3,baseRadius=3,environmentUrl='',darkScene=false,measurementBoxes=null;
   const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
   const draco=new DRACOLoader();draco.setDecoderPath('vendor/addons/libs/draco/');
   const loader=new GLTFLoader();loader.setDRACOLoader(draco);
@@ -75,6 +75,13 @@ export function createViewer(element){
       if(object)scene.remove(object);
       if(ground){scene.remove(ground);ground.geometry.dispose();ground.material.dispose();}
       object=gltf.scene;scene.add(object);
+      object.updateWorldMatrix(true,true);
+      const deskBox=new THREE.Box3(),cabinetBox=new THREE.Box3();
+      object.traverse(node=>{if(!node.isMesh)return;const names=[node.material].flat().map(material=>material?.name);
+        if(names.some(name=>['VREEL_desktop','VREEL_cabinet','VREEL_cabinet_fronts','VREEL_deskMetal','VREEL_frontPanel'].includes(name)))deskBox.expandByObject(node);
+        if(names.some(name=>['VREEL_cabinet','VREEL_cabinet_fronts'].includes(name)))cabinetBox.expandByObject(node);
+      });
+      measurementBoxes={desk:deskBox.isEmpty()?new THREE.Box3().setFromObject(object):deskBox,cabinet:cabinetBox};
       const materials=new Map();
       object.traverse(node=>{if(!node.isMesh)return;node.castShadow=true;node.receiveShadow=true;
         for(const material of [node.material].flat())if(material)materials.set(material.name,material);
@@ -132,12 +139,25 @@ export function createViewer(element){
     fieldOfView:{set(){}},
   });
   element.getCameraOrbit=()=>{const v=camera.position.clone().sub(controls.target);return {theta:Math.atan2(v.x,v.z),phi:Math.acos(THREE.MathUtils.clamp(v.y/v.length(),-1,1)),radius:v.length()};};
-  element.getDimensions=()=>{if(!object)return null;const box=new THREE.Box3().setFromObject(object),size=box.getSize(new THREE.Vector3());return {x:size.x*100,y:size.y*100,z:size.z*100};};
   element.jumpCameraToGoal=()=>controls.update();
   element.materialFromPoint=fromPoint;
   element.createTexture=(url)=>new Promise((resolve,reject)=>textureLoader.load(url,texture=>{texture.colorSpace=THREE.SRGBColorSpace;texture.flipY=false;resolve(texture);},undefined,reject));
   element.requestUpdate=()=>renderer.render(scene,camera);
   element.toDataURL=()=>{renderer.render(scene,camera);return renderer.domElement.toDataURL('image/png');};
+  element.to4KDataURL=()=>{const width=3840,height=2160,oldSize=renderer.getSize(new THREE.Vector2()),oldRatio=renderer.getPixelRatio(),oldAspect=camera.aspect;
+    try{renderer.setPixelRatio(1);renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();renderer.render(scene,camera);return renderer.domElement.toDataURL('image/png');}
+    finally{renderer.setPixelRatio(oldRatio);renderer.setSize(oldSize.x,oldSize.y,false);camera.aspect=oldAspect;camera.updateProjectionMatrix();}}
+  element.panView=direction=>{const right=new THREE.Vector3().setFromMatrixColumn(camera.matrix,0);const amount=radius*.08*direction;camera.position.addScaledVector(right,amount);controls.target.addScaledVector(right,amount);controls.update();};
+  element.getDimensions=()=>{if(!object)return null;const box=new THREE.Box3().setFromObject(object),d=box.getSize(new THREE.Vector3());return {x:d.x*100,y:d.y*100,z:d.z*100,width:d.x,depth:d.z,height:d.y};};
+  element.getMeasurementGuides=()=>{if(!measurementBoxes)return null;
+    const project=(x,y,z)=>{const p=new THREE.Vector3(x,y,z).project(camera);return {x:(p.x+1)*element.clientWidth/2,y:(1-p.y)*element.clientHeight/2};};
+    const guides=[];
+    for(const [part,box] of Object.entries(measurementBoxes)){if(box.isEmpty())continue;const d=box.getSize(new THREE.Vector3());
+      const add=(axis,start,end,offset)=>guides.push({part,label:`${axis} ${Math.round((axis==='G'?d.x:axis==='D'?d.z:d.y)*100)} cm`,start:project(...start),end:project(...end),offset});
+      add('G',[box.min.x,box.min.y,box.max.z],[box.max.x,box.min.y,box.max.z],{x:0,y:part==='desk'?32:16});
+      add('D',[box.min.x,box.min.y,box.min.z],[box.min.x,box.min.y,box.max.z],{x:part==='desk'?-24:-15,y:8});
+      add('Y',[box.max.x,box.min.y,box.max.z],[box.max.x,box.max.y,box.max.z],{x:part==='desk'?29:18,y:0});
+    }return guides;};
   element.setRotationSpeed=value=>{element.dataset.rotationSpeed=value;};
   element.setAutoRotate=value=>{controls.autoRotate=value;};
   return element;
