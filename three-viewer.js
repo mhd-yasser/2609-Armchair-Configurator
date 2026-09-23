@@ -48,7 +48,7 @@ export function createViewer(element){
     light.position.set(...p.position);light.shadow.intensity=p.shadow;light.castShadow=shadowsEnabled;
     renderer.toneMappingExposure=p.exposure;scene.environmentIntensity=p.environment;renderer.shadowMap.needsUpdate=true;
   }
-  let object=null,ground=null,materialAdapters=[],radius=3,baseRadius=3,environmentUrl='',darkScene=false,measurementBoxes=null;
+  let sourceNodes=[],object=null,ground=null,materialAdapters=[],radius=3,baseRadius=3,environmentUrl='',darkScene=false,measurementBoxes=null;
   const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
   const moduleRoot=new URL('./',import.meta.url);
   const draco=new DRACOLoader();draco.setDecoderPath(new URL('vendor/addons/libs/draco/',moduleRoot).href);
@@ -71,7 +71,7 @@ export function createViewer(element){
     };
     return {name:material.name,raw:material,pbrMetallicRoughness:pbr,setAlphaMode(mode){material.transparent=mode==='BLEND';material.needsUpdate=true;}};
   }
-  function visibleBox(){return object?new THREE.Box3().setFromObject(object):new THREE.Box3();}
+  function visibleBox(root=object){const box=new THREE.Box3();if(!root)return box;root.updateWorldMatrix(true,true);root.traverseVisible(node=>{if(node.isMesh){node.geometry.computeBoundingBox();box.union(node.geometry.boundingBox.clone().applyMatrix4(node.matrixWorld));}});return box;}
   function reframe(){
     if(!object)return;
     object.updateWorldMatrix(true,true);
@@ -87,7 +87,7 @@ export function createViewer(element){
       const gltf=await new Promise((resolve,reject)=>loader.parse(bytes,'',resolve,reject));
       if(object)scene.remove(object);
       if(ground){scene.remove(ground);ground.geometry.dispose();ground.material.dispose();}
-      object=gltf.scene;scene.add(object);
+      object=gltf.scene;sourceNodes=await gltf.parser.getDependencies('node');sourceNodes.forEach((node,index)=>{node.userData.sourceNodeIndex=index;node.userData.sourceName=gltf.parser.json.nodes[index].name||'';});scene.add(object);
       object.updateWorldMatrix(true,true);
       const deskBox=new THREE.Box3(),cabinetBox=new THREE.Box3();
       object.traverse(node=>{if(!node.isMesh)return;const names=[node.material].flat().map(material=>material?.name);
@@ -126,9 +126,9 @@ export function createViewer(element){
   }
   function fromPoint(x,y){if(!object)return null;const rect=renderer.domElement.getBoundingClientRect();
     pointer.set((x-rect.left)/rect.width*2-1,-(y-rect.top)/rect.height*2+1);raycaster.setFromCamera(pointer,camera);
-    const hit=raycaster.intersectObject(object,true)[0];if(!hit)return null;
+    const hit=raycaster.intersectObject(object,true).find(hit=>{for(let n=hit.object;n;n=n.parent)if(!n.visible)return false;return true;});if(!hit)return null;
     const material=Array.isArray(hit.object.material)?hit.object.material[hit.face?.materialIndex||0]:hit.object.material;
-    const adapter=materialAdapters.find(m=>m.raw===material)||materialAdapters.find(m=>m.name===material?.name)||null;
+    const adapter=material?wrapMaterial(material):null;
     if(adapter)adapter.object=hit.object;
     return adapter;
   }
@@ -139,7 +139,7 @@ export function createViewer(element){
   }requestAnimationFrame(frame);
   Object.defineProperties(element,{
     src:{set:setModel},
-    model:{get:()=>object?{materials:materialAdapters,root:object}:null},
+    model:{get:()=>object?{materials:materialAdapters,root:object,nodes:sourceNodes}:null},
     environmentImage:{set:environment},
     exposure:{set:value=>renderer.toneMappingExposure=value},
     shadowIntensity:{set:value=>{shadowsEnabled=Number(value)>0;light.castShadow=shadowsEnabled;renderer.shadowMap.needsUpdate=true;}},
@@ -159,6 +159,7 @@ export function createViewer(element){
   element.createTexture=(url)=>new Promise((resolve,reject)=>textureLoader.load(url,texture=>{texture.colorSpace=THREE.SRGBColorSpace;texture.flipY=false;resolve(texture);},undefined,reject));
   element.requestUpdate=()=>renderer.render(scene,camera);
   element.reframe=reframe;
+  element.bounds=root=>visibleBox(root);
   element.findObjects=name=>{const matches=[];object?.traverse(node=>{if(node.name===name)matches.push(node);});return matches;};
   element.setObjectsVisible=(names,visible)=>{const wanted=new Set(names);object?.traverse(node=>{if(wanted.has(node.name))node.visible=visible;});reframe();};
   element.toDataURL=()=>{renderer.render(scene,camera);return renderer.domElement.toDataURL('image/png');};
@@ -166,7 +167,7 @@ export function createViewer(element){
     try{renderer.setPixelRatio(1);renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();renderer.render(scene,camera);return renderer.domElement.toDataURL('image/png');}
     finally{renderer.setPixelRatio(oldRatio);renderer.setSize(oldSize.x,oldSize.y,false);camera.aspect=oldAspect;camera.updateProjectionMatrix();}}
   element.panView=direction=>{const right=new THREE.Vector3().setFromMatrixColumn(camera.matrix,0);const amount=radius*.08*direction;camera.position.addScaledVector(right,amount);controls.target.addScaledVector(right,amount);controls.update();};
-  element.getDimensions=()=>{if(!object)return null;const box=new THREE.Box3().setFromObject(object),d=box.getSize(new THREE.Vector3());return {x:d.x*100,y:d.y*100,z:d.z*100,width:d.x,depth:d.z,height:d.y};};
+  element.getDimensions=()=>{if(!object)return null;const box=visibleBox(),d=box.getSize(new THREE.Vector3());return {x:d.x*100,y:d.y*100,z:d.z*100,width:d.x,depth:d.z,height:d.y};};
   element.getMeasurementGuides=()=>{if(!measurementBoxes)return null;
     const project=(x,y,z)=>{const p=new THREE.Vector3(x,y,z).project(camera);return {x:(p.x+1)*element.clientWidth/2,y:(1-p.y)*element.clientHeight/2};};
     const guides=[];
