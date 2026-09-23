@@ -53,3 +53,4 @@
 @media(max-width:900px){.viewer-utilities{top:66px;right:10px}.viewer-panel .lighting-presets{top:121px;right:10px}.dimensions-overlay{top:120px;left:12px}.viewer-tools{max-width:96vw}}
 @media(max-width:500px){.viewer-tools button{min-width:35px;padding:0 6px}.downloads{grid-template-columns:1fr}}
 .icon-defs{position:absolute;width:0;height:0;overflow:hidden}.viewer-utilities svg,.viewer-tools svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
+.variant-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.variant-options button{min-height:42px;padding:8px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--navy);font:600 13px Alexandria,Arial,sans-serif;cursor:pointer}.variant-options button.active{border-color:var(--gold);background:#f8f2e9;color:#795627;box-shadow:inset 0 0 0 1px var(--gold)}

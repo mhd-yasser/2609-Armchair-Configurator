@@ -3,6 +3,8 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {DRACOLoader} from 'three/addons/loaders/DRACOLoader.js';
 import {RGBELoader} from 'three/addons/loaders/RGBELoader.js';
+import {KTX2Loader} from 'three/addons/loaders/KTX2Loader.js';
+import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 
 // Small adapter for the configurator UI. Every visible finish is a real Three.js material.
 export function createViewer(element){
@@ -48,8 +50,10 @@ export function createViewer(element){
   }
   let object=null,ground=null,materialAdapters=[],radius=3,baseRadius=3,environmentUrl='',darkScene=false,measurementBoxes=null;
   const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
-  const draco=new DRACOLoader();draco.setDecoderPath('vendor/addons/libs/draco/');
-  const loader=new GLTFLoader();loader.setDRACOLoader(draco);
+  const moduleRoot=new URL('./',import.meta.url);
+  const draco=new DRACOLoader();draco.setDecoderPath(new URL('vendor/addons/libs/draco/',moduleRoot).href);
+  const ktx2=new KTX2Loader();ktx2.setTranscoderPath(new URL('vendor/addons/libs/basis/',moduleRoot).href);ktx2.detectSupport(renderer);
+  const loader=new GLTFLoader();loader.setDRACOLoader(draco);loader.setKTX2Loader(ktx2);loader.setMeshoptDecoder(MeshoptDecoder);
   const textureLoader=new THREE.TextureLoader();
 
   function size(){const w=Math.max(1,element.clientWidth),h=Math.max(1,element.clientHeight);renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}
@@ -66,6 +70,15 @@ export function createViewer(element){
       setRoughnessFactor(v){material.roughness=v;material.needsUpdate=true;}
     };
     return {name:material.name,raw:material,pbrMetallicRoughness:pbr,setAlphaMode(mode){material.transparent=mode==='BLEND';material.needsUpdate=true;}};
+  }
+  function visibleBox(){return object?new THREE.Box3().setFromObject(object):new THREE.Box3();}
+  function reframe(){
+    if(!object)return;
+    object.updateWorldMatrix(true,true);
+    const box=visibleBox();if(box.isEmpty())return;
+    const dim=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());controls.target.copy(center);
+    radius=Math.max(dim.length()*1.78,1.25);baseRadius=radius;camera.near=Math.max(.01,radius/1000);camera.far=radius*30;camera.updateProjectionMatrix();face();
+    if(ground){ground.position.y=box.min.y-.012;ground.scale.setScalar(Math.max(dim.x,dim.z)*1.65);}
   }
   async function setModel(url){
     element.dispatchEvent(new CustomEvent('progress',{detail:{totalProgress:0}}));
@@ -89,7 +102,7 @@ export function createViewer(element){
       materialAdapters=[...materials.values()].map(wrapMaterial);
       const box=new THREE.Box3().setFromObject(object),dim=box.getSize(new THREE.Vector3());
       const center=box.getCenter(new THREE.Vector3());controls.target.copy(center);
-      radius=Math.max(dim.length()*1.28,2);baseRadius=radius;camera.near=Math.max(.01,radius/1000);camera.far=radius*30;camera.updateProjectionMatrix();face();
+      radius=Math.max(dim.length()*1.78,2);baseRadius=radius;camera.near=Math.max(.01,radius/1000);camera.far=radius*30;camera.updateProjectionMatrix();face();
       for(const studioLight of [light,fill,rim]){studioLight.target.position.copy(center);scene.add(studioLight.target);}
       const extent=Math.max(dim.x,dim.z)*1.65;
       light.shadow.camera.left=-extent;light.shadow.camera.right=extent;light.shadow.camera.top=extent;light.shadow.camera.bottom=-extent;light.shadow.camera.updateProjectionMatrix();
@@ -115,7 +128,9 @@ export function createViewer(element){
     pointer.set((x-rect.left)/rect.width*2-1,-(y-rect.top)/rect.height*2+1);raycaster.setFromCamera(pointer,camera);
     const hit=raycaster.intersectObject(object,true)[0];if(!hit)return null;
     const material=Array.isArray(hit.object.material)?hit.object.material[hit.face?.materialIndex||0]:hit.object.material;
-    return materialAdapters.find(m=>m.name===material?.name)||null;
+    const adapter=materialAdapters.find(m=>m.raw===material)||materialAdapters.find(m=>m.name===material?.name)||null;
+    if(adapter)adapter.object=hit.object;
+    return adapter;
   }
   let last=performance.now();
   function frame(now){requestAnimationFrame(frame);const delta=Math.min((now-last)/1000,.1);last=now;
@@ -124,7 +139,7 @@ export function createViewer(element){
   }requestAnimationFrame(frame);
   Object.defineProperties(element,{
     src:{set:setModel},
-    model:{get:()=>object?{materials:materialAdapters}:null},
+    model:{get:()=>object?{materials:materialAdapters,root:object}:null},
     environmentImage:{set:environment},
     exposure:{set:value=>renderer.toneMappingExposure=value},
     shadowIntensity:{set:value=>{shadowsEnabled=Number(value)>0;light.castShadow=shadowsEnabled;renderer.shadowMap.needsUpdate=true;}},
@@ -135,7 +150,7 @@ export function createViewer(element){
       radius=r==='auto'?baseRadius:(parseFloat(r)||radius);
       const degrees=v=>v.endsWith('rad')?THREE.MathUtils.radToDeg(parseFloat(v)):parseFloat(v);
       face(degrees(theta),degrees(phi));}},
-    cameraTarget:{set(value){if(value==='auto'&&object)controls.target.copy(new THREE.Box3().setFromObject(object).getCenter(new THREE.Vector3()));}},
+    cameraTarget:{set(value){if(value.startsWith('auto')&&object)controls.target.copy(visibleBox().getCenter(new THREE.Vector3()));}},
     fieldOfView:{set(){}},
   });
   element.getCameraOrbit=()=>{const v=camera.position.clone().sub(controls.target);return {theta:Math.atan2(v.x,v.z),phi:Math.acos(THREE.MathUtils.clamp(v.y/v.length(),-1,1)),radius:v.length()};};
@@ -143,6 +158,9 @@ export function createViewer(element){
   element.materialFromPoint=fromPoint;
   element.createTexture=(url)=>new Promise((resolve,reject)=>textureLoader.load(url,texture=>{texture.colorSpace=THREE.SRGBColorSpace;texture.flipY=false;resolve(texture);},undefined,reject));
   element.requestUpdate=()=>renderer.render(scene,camera);
+  element.reframe=reframe;
+  element.findObjects=name=>{const matches=[];object?.traverse(node=>{if(node.name===name)matches.push(node);});return matches;};
+  element.setObjectsVisible=(names,visible)=>{const wanted=new Set(names);object?.traverse(node=>{if(wanted.has(node.name))node.visible=visible;});reframe();};
   element.toDataURL=()=>{renderer.render(scene,camera);return renderer.domElement.toDataURL('image/png');};
   element.to4KDataURL=()=>{const width=3840,height=2160,oldSize=renderer.getSize(new THREE.Vector2()),oldRatio=renderer.getPixelRatio(),oldAspect=camera.aspect;
     try{renderer.setPixelRatio(1);renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();renderer.render(scene,camera);return renderer.domElement.toDataURL('image/png');}
