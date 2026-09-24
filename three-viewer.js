@@ -139,7 +139,9 @@ export function createViewer(element){
         if(names.some(name=>['VREEL_desktop','VREEL_cabinet','VREEL_cabinet_fronts','VREEL_deskMetal','VREEL_frontPanel'].includes(name)))deskBox.expandByObject(node);
         if(names.some(name=>['VREEL_cabinet','VREEL_cabinet_fronts'].includes(name)))cabinetBox.expandByObject(node);
       });
-      measurementBoxes={desk:deskBox.isEmpty()?new THREE.Box3().setFromObject(object):deskBox,cabinet:cabinetBox};
+      measurementBoxes=document.body.dataset.product==='desk'
+        ?{desk:deskBox.isEmpty()?new THREE.Box3().setFromObject(object):deskBox,cabinet:cabinetBox}
+        :{product:new THREE.Box3().setFromObject(object)};
       const materials=new Map();
       object.traverse(node=>{if(!node.isMesh)return;node.castShadow=true;node.receiveShadow=true;
         for(const material of [node.material].flat())if(material)materials.set(material.name,material);
