@@ -217,11 +217,20 @@ export function createViewer(element){
   element.getMeasurementGuides=()=>{if(!measurementBoxes)return null;
     const project=(x,y,z)=>{const p=new THREE.Vector3(x,y,z).project(camera);return {x:(p.x+1)*element.clientWidth/2,y:(1-p.y)*element.clientHeight/2};};
     const guides=[];
-    for(const [part,box] of Object.entries(measurementBoxes)){if(box.isEmpty())continue;const d=box.getSize(new THREE.Vector3());
-      const add=(axis,start,end,offset)=>guides.push({part,label:`${axis} ${Math.round((axis==='G'?d.x:axis==='D'?d.z:d.y)*100)} cm`,start:project(...start),end:project(...end),offset});
-      add('G',[box.min.x,box.min.y,box.max.z],[box.max.x,box.min.y,box.max.z],{x:0,y:part==='desk'?32:16});
-      add('D',[box.min.x,box.min.y,box.min.z],[box.min.x,box.min.y,box.max.z],{x:part==='desk'?-24:-15,y:8});
-      add('Y',[box.max.x,box.min.y,box.max.z],[box.max.x,box.max.y,box.max.z],{x:part==='desk'?29:18,y:0});
+    for(const [part,box] of Object.entries(measurementBoxes)){if(box.isEmpty())continue;const d=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
+      const nearX=camera.position.x>=center.x?box.max.x:box.min.x;
+      const nearZ=camera.position.z>=center.z?box.max.z:box.min.z;
+      const screenCenter=project(center.x,center.y,center.z);
+      const add=(axis,start,end,fallback)=>{
+        const a=project(...start),b=project(...end),mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+        const dx=mid.x-screenCenter.x,dy=mid.y-screenCenter.y,length=Math.hypot(dx,dy);
+        const distance=part==='desk'?25:18;
+        const offset=length>6?{x:dx/length*distance,y:dy/length*distance}:fallback;
+        guides.push({part,label:`${axis} ${Math.round((axis==='G'?d.x:axis==='D'?d.z:d.y)*100)} cm`,start:a,end:b,offset});
+      };
+      add('G',[box.min.x,box.min.y,nearZ],[box.max.x,box.min.y,nearZ],{x:0,y:25});
+      add('D',[nearX,box.min.y,box.min.z],[nearX,box.min.y,box.max.z],{x:nearX===box.max.x?25:-25,y:0});
+      add('Y',[nearX,box.min.y,nearZ],[nearX,box.max.y,nearZ],{x:nearX===box.max.x?25:-25,y:0});
     }return guides;};
   element.setRotationSpeed=value=>{element.dataset.rotationSpeed=value;};
   element.setAutoRotate=value=>{controls.autoRotate=value;};
