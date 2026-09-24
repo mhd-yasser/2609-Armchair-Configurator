@@ -18,6 +18,7 @@
 .wheel-drag{position:absolute;z-index:12;top:12px;left:50%;transform:translateX(-50%);padding:3px 12px;border:1px solid #9bb1cb;border-radius:20px;background:#25384f;color:#fff;cursor:grab;touch-action:none;font-size:.68rem;user-select:none}
 .wheel-drag:active{cursor:grabbing}
 .viewer-panel.dark-scene{background:linear-gradient(145deg,#434c58,#171e2a)}
+.gallery-back{display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--navy);font-size:.8rem;font-weight:650;text-decoration:none;white-space:nowrap;transition:background .15s,border-color .15s}.gallery-back:hover,.gallery-back:focus-visible{background:#f8f1e8;border-color:var(--gold);outline-offset:2px}@media(max-width:500px){.gallery-back{padding:7px 10px;font-size:.75rem}}
 .lighting-presets{position:absolute;z-index:5;top:82px;right:20px;display:flex;gap:3px;padding:5px;border:1px solid #fff;border-radius:10px;background:#fffffff0;box-shadow:0 8px 25px #0f1b2d20;backdrop-filter:blur(8px)}
 .lighting-presets button{border:0;border-radius:6px;background:transparent;color:var(--navy);padding:8px 10px;font-size:.7rem;font-weight:700;cursor:pointer}
 .lighting-presets button:hover,.lighting-presets button[aria-pressed=true]{background:var(--navy);color:white}
