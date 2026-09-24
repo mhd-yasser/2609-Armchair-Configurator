@@ -16,7 +16,7 @@ const leather=[
 ];
 const wood=[
   {id:'original',label:'Mevcut Ahşap',original:true,color:'#966f50'},
-  ...[['oak-imbir','Meşe · Imbir'],['oak-nefrit','Meşe · Nefrit'],['oak-qvarz','Meşe · Qvarz'],['oak-marrakesh','Meşe · Marrakesh'],['oak-muskat','Meşe · Muskat'],['walnut-american','Amerikan Ceviz']].map(([id,label])=>({id,label,image:asset(`textures/wood/${id}.webp`),roughness:.78,factor:[1,1,1],wood:true})),
+  ...[['oak-nefrit','Meşe · Nefrit'],['oak-marrakesh','Meşe · Marrakesh'],['oak-muskat','Meşe · Muskat']].map(([id,label])=>({id,label,image:asset(`textures/wood/${id}.webp`),roughness:.78,factor:[1,1,1],wood:true})),
 ];
 const solids=[
   {id:'white',label:'Düz Beyaz · Yarı Mat',color:'#eeeae1',factor:[.86,.84,.8],roughness:.38},
@@ -40,21 +40,22 @@ const group=(label,materials,options,initial,target=()=>true)=>({label,materials
 const configs={
   sofa:{title:'Lounge Duo',file:asset('sofa/model/Sofa.glb'),download:'VREEL_Lounge_Duo.glb',groups:{leather:group('Deri Yüzeyi',['Sofa_Fills_Leather_Black'],leather,'black-matte')}},
   chair:{title:'Aura Yönetici Koltuğu',file:asset('chair/model/Chair.glb'),download:'VREEL_Aura_Yonetici_Koltugu.glb',groups:{
-    leather:group('Deri Yüzeyi',['Material__2147483027'],leather,'black-matte'),
-    wood:group('Ahşap Detay',['WD'],wood,'original'),
-    metal:group('Metal Detay',['MetalBlackMatte'],metal,'black'),
+    leather:group('Deri Yüzeyi',['Material__2147483027'],leather,'brown-glossy'),
+    wood:group('Ahşap Detay',['WD'],wood,'oak-nefrit'),
+    metal:group('Metal Detay',['MetalBlackMatte'],metal,'chrome-matte'),
   }},
   desk:{title:'Axis Executive Desk',file:asset('desk/model/Desk.glb'),download:'VREEL_Axis_Executive_Desk.glb',groups:{
-    desktop:group('Masa Üstü ve Ahşap Ayaklar',['Material__2147483063'],[...wood,...solids],'original',node=>/^Top/.test(node.name)||/^Leg/.test(node.name)),
-    cabinet:group('Keson Gövdesi',['Material__2147482989','Material__2147483063'],wood,'original',node=>node.name==='KesonUnitBody'),
-    cabinetFace:group('Keson Kapakları',['MDFBlack'],[...wood,...solids],'anthracite',node=>node.name==='KesonUnitFaces'),
+    desktop:group('Masa Üstü',['Material__2147483063'],[...wood,...solids],'oak-muskat',node=>/^Top/.test(node.name)),
+    woodLeg:group('Ahşap Ayaklar',['Material__2147483063'],[...wood,...solids],'oak-muskat',node=>/^Leg/.test(node.name)),
+    cabinet:group('Keson Gövdesi',['Material__2147482989','Material__2147483063'],wood,'oak-muskat',node=>node.name==='KesonUnitBody'),
+    cabinetFace:group('Keson Kapakları',['MDFBlack'],[...wood,...solids],'white',node=>node.name==='KesonUnitFaces'),
     frontPanel:group('Ön Panel',['Material__2147482989'],[...wood.filter(option=>!option.original),...solids,...glass],'frosted-clear',node=>node.name.startsWith('FrontPanel')),
-    metal:group('Metal Ayaklar',['MetalBlackMatte'],metal,'black'),
+    metal:group('Metal Ayaklar',['MetalBlackMatte'],metal,'white'),
   }},
 };
 const config=configs[page];
 const state=Object.fromEntries(Object.entries(config.groups).map(([key,value])=>[key,value.initial]));
-const textures=new Map();let modelBlob=null,pointerStart=null,wheelGroup=null,wheelObject=null,wheelPage=0,pdfDocument=null;
+const textures=new Map(),projectedTextures=new Map();let modelBlob=null,pointerStart=null,wheelGroup=null,wheelObject=null,wheelPage=0,pdfDocument=null;
 const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const choice=(key,id=state[key])=>config.groups[key].options.find(option=>option.id===id);
 const swatch=option=>option.image?`background-image:url('${option.image}')`:`background-color:${option.color}`;
@@ -62,11 +63,23 @@ const swatch=option=>option.image?`background-image:url('${option.image}')`:`bac
 function isolateMaterials(){viewer.model.root.traverse(node=>{if(!node.isMesh)return;const list=[node.material].flat().map(material=>{
   const clone=material.clone();clone.name=material.name;clone.userData.vreelOriginalName=material.name;clone.userData.vreelOriginal={map:material.map,color:material.color.clone(),metalness:material.metalness,roughness:material.roughness,transparent:material.transparent,opacity:material.opacity,depthWrite:material.depthWrite,roughnessMap:material.roughnessMap,metalnessMap:material.metalnessMap,normalMap:material.normalMap,bumpMap:material.bumpMap,bumpScale:material.bumpScale,side:material.side,transmission:material.transmission,thickness:material.thickness,alphaMap:material.alphaMap};return clone;
 });node.material=Array.isArray(node.material)?list:list[0];});}
-async function loadTexture(url,original,color=false){if(!textures.has(url))textures.set(url,viewer.createTexture(url));const base=await textures.get(url),texture=base.clone();texture.colorSpace=color?THREE.SRGBColorSpace:THREE.NoColorSpace;if(original?.map){texture.channel=original.map.channel;texture.offset.copy(original.map.offset);texture.repeat.copy(original.map.repeat);texture.center.copy(original.map.center);texture.rotation=original.map.rotation;texture.wrapS=original.map.wrapS;texture.wrapT=original.map.wrapT;}texture.needsUpdate=true;return texture;}
+async function loadTexture(url,original,color=false){
+  // All desk wood faces use the same world-space UV layout. Share GPU textures
+  // across the many size variants instead of allocating a copy per mesh.
+  const sharedKey=page==='desk'?`${url}|${color}|${original?.map?.channel??0}`:null;
+  if(sharedKey&&projectedTextures.has(sharedKey))return projectedTextures.get(sharedKey);
+  const pending=(async()=>{
+    if(!textures.has(url))textures.set(url,viewer.createTexture(url));
+    const base=await textures.get(url),texture=base.clone();texture.colorSpace=color?THREE.SRGBColorSpace:THREE.NoColorSpace;
+    if(original?.map){texture.channel=original.map.channel;texture.offset.copy(original.map.offset);texture.repeat.copy(original.map.repeat);texture.center.copy(original.map.center);texture.rotation=original.map.rotation;texture.wrapS=original.map.wrapS;texture.wrapT=original.map.wrapT;}
+    texture.needsUpdate=true;return texture;
+  })();
+  if(sharedKey)projectedTextures.set(sharedKey,pending);return pending;
+}
 function alignMaps(material,option,maps){if(!option.wood)return;for(const map of maps){if(!map)continue;map.wrapS=map.wrapT=THREE.RepeatWrapping;if(page==='desk'&&material.userData.boxWoodProjection){map.offset.set(0,0);map.repeat.set(1,1);map.rotation=0;}else{map.repeat.multiplyScalar(page==='chair'?4:2);}map.needsUpdate=true;}}
 function semanticNode(node){for(let n=node;n;n=n.parent)if(n.userData.sourceName)return n;return node;}
 function targetMaterials(node,key){const spec=config.groups[key];if(!node.isMesh||!spec.target(semanticNode(node)))return[];return [node.material].flat().filter(material=>key==='frontPanel'&&page==='desk'||spec.materials.includes(materialName(material)));}
-async function paint(node,key,option){for(const material of targetMaterials(node,key)){const original=material.userData.vreelOriginal;const revision=(material.userData.paintRevision||0)+1;material.userData.paintRevision=revision;if(option.original){material.map=original.map;material.color.copy(original.color);material.metalness=original.metalness;material.roughness=original.roughness;material.transparent=original.transparent;material.opacity=original.opacity;material.depthWrite=original.depthWrite;material.transmission=original.transmission??0;material.thickness=original.thickness??0;material.alphaMap=original.alphaMap;material.roughnessMap=original.roughnessMap;material.bumpMap=original.bumpMap;material.bumpScale=original.bumpScale;material.side=original.side;material.metalnessMap=original.metalnessMap;material.normalMap=original.normalMap;if(page==='chair'&&key==='wood'||page==='desk'&&['desktop','cabinet'].includes(key)){material.metalness=0;material.roughness=.35;material.normalScale.set(.1,.1);}}else{const [nextMap,roughMap,bumpMap,normalMap]=await Promise.all([option.image?loadTexture(option.image,original,true):null,option.wood||option.leather?loadTexture(asset(`textures/pbr/${option.wood?option.id:'leather'}-gloss.webp`),original):null,option.wood?loadTexture(asset(`textures/pbr/${option.id}-bump.webp`),original):null,option.leather?loadTexture(asset('textures/pbr/leather-normal.webp'),original):null]);if(material.userData.paintRevision!==revision)return;material.map=nextMap;material.roughnessMap=roughMap;material.metalnessMap=null;material.normalMap=normalMap;material.normalScale.set(option.wood?.1:.3,option.wood?.1:.3);material.bumpMap=bumpMap;material.bumpScale=bumpMap?(option.wood?.003:.012):0;material.side=option.glass?THREE.DoubleSide:original.side;alignMaps(material,option,[nextMap,roughMap,bumpMap]);material.color.setRGB(...(option.factor||[1,1,1]));material.metalness=option.metalness??0;material.roughness=option.wood?.35:(option.roughness??.55);material.transparent=Boolean(option.glass);material.opacity=option.opacity??1;material.depthWrite=!option.glass;if(key==='frontPanel'){material.transmission=option.glass?(original.transmission??0):0;material.thickness=option.glass?(original.thickness??0):0;material.alphaMap=option.glass?original.alphaMap:null;if(!option.glass){material.opacity=1;material.transparent=false;material.depthWrite=true;}}}material.userData.finishId=option.id;material.needsUpdate=true;}}
+async function paint(node,key,option){for(const material of targetMaterials(node,key)){const original=material.userData.vreelOriginal;const revision=(material.userData.paintRevision||0)+1;material.userData.paintRevision=revision;if(option.original){material.map=original.map;material.color.copy(original.color);material.metalness=original.metalness;material.roughness=original.roughness;material.transparent=original.transparent;material.opacity=original.opacity;material.depthWrite=original.depthWrite;material.transmission=original.transmission??0;material.thickness=original.thickness??0;material.alphaMap=original.alphaMap;material.roughnessMap=original.roughnessMap;material.bumpMap=original.bumpMap;material.bumpScale=original.bumpScale;material.side=original.side;material.metalnessMap=original.metalnessMap;material.normalMap=original.normalMap;if(page==='chair'&&key==='wood'||page==='desk'&&['desktop','woodLeg','cabinet'].includes(key)){material.metalness=0;material.roughness=.35;material.normalScale.set(.1,.1);}}else{const [nextMap,roughMap,bumpMap,normalMap]=await Promise.all([option.image?loadTexture(option.image,original,true):null,option.wood||option.leather?loadTexture(asset(`textures/pbr/${option.wood?option.id:'leather'}-gloss.webp`),original):null,option.wood?loadTexture(asset(`textures/pbr/${option.id}-bump.webp`),original):null,option.leather?loadTexture(asset('textures/pbr/leather-normal.webp'),original):null]);if(material.userData.paintRevision!==revision)return;material.map=nextMap;material.roughnessMap=roughMap;material.metalnessMap=null;material.normalMap=normalMap;material.normalScale.set(option.wood?.1:.3,option.wood?.1:.3);material.bumpMap=bumpMap;material.bumpScale=bumpMap?(option.wood?.003:.012):0;material.side=option.glass?THREE.DoubleSide:original.side;alignMaps(material,option,[nextMap,roughMap,bumpMap]);material.color.setRGB(...(option.factor||[1,1,1]));material.metalness=option.metalness??0;material.roughness=option.wood?(option.id==='oak-muskat'?1:.35):(option.roughness??.55);material.transparent=Boolean(option.glass);material.opacity=option.opacity??1;material.depthWrite=!option.glass;if(key==='frontPanel'){material.transmission=option.glass?(original.transmission??0):0;material.thickness=option.glass?(original.thickness??0):0;material.alphaMap=option.glass?original.alphaMap:null;if(!option.glass){material.opacity=1;material.transparent=false;material.depthWrite=true;}}}material.userData.finishId=option.id;material.needsUpdate=true;}}
 async function applyGroup(key,option=choice(key),single=null){const jobs=[];(single?[single]:[viewer.model.root]).forEach(root=>root.traverse?root.traverse(node=>jobs.push(paint(node,key,option))):jobs.push(paint(root,key,option)));await Promise.all(jobs);viewer.requestUpdate();}
 function buildMaterials(){ui.groups.replaceChildren();ui.details.replaceChildren();for(const [key,spec] of Object.entries(config.groups)){const card=document.createElement('details');card.className='option-card';card.dataset.group=key;card.open=key===Object.keys(config.groups)[0];card.innerHTML=`<summary><span>${esc(spec.label)}</span><b data-summary="${key}"></b></summary><div class="option-body swatches">${spec.options.map(option=>`<button type="button" class="swatch" data-material="${key}" data-value="${option.id}" aria-label="${esc(option.label)}"><i style="${swatch(option)}"></i><span>${esc(option.label)}</span></button>`).join('')}</div>`;ui.groups.append(card);const row=document.createElement('div');row.innerHTML=`<dt>${esc(spec.label)}</dt><dd data-detail="${key}"></dd>`;ui.details.append(row);}ui.groups.addEventListener('click',event=>{const button=event.target.closest('[data-material]');if(button)select(button.dataset.material,button.dataset.value);});updateText();}
 function updateText(){ui.selection.textContent=Object.entries(config.groups).map(([key,spec])=>`${spec.label}: ${choice(key).label}`).join(' · ');for(const key of Object.keys(config.groups)){document.querySelectorAll(`[data-summary="${key}"],[data-detail="${key}"]`).forEach(node=>node.textContent=choice(key).label);document.querySelectorAll(`[data-material="${key}"]`).forEach(node=>node.classList.toggle('active',node.dataset.value===state[key]));}}
@@ -78,15 +91,14 @@ function setupSofa(){
   const nodes=viewer.model.nodes;
   // Original GLB node IDs: every unit includes its multi-material body and pillow.
   const units=[[11,13,9],[5,7],[1,3]].map(ids=>ids.map(id=>nodes[id]));
-  const apply=count=>{units.forEach((unit,index)=>unit.forEach(node=>node.visible=index<count));closeWheel();viewer.reframe();updateDimensions();};
-  const card=addVariantCard('Modül Sayısı',[{id:'one',label:'Tekli'},{id:'two',label:'İkili'},{id:'three',label:'Üçlü'}],'two',id=>apply({one:1,two:2,three:3}[id]));apply(2);
+  const apply=(count,initial=false)=>{units.forEach((unit,index)=>unit.forEach(node=>node.visible=index<count));closeWheel();if(initial)viewer.reframe();updateDimensions();viewer.requestUpdate();};
+  const card=addVariantCard('Modül Sayısı',[{id:'one',label:'Tekli'},{id:'two',label:'İkili'},{id:'three',label:'Üçlü'}],'two',id=>apply({one:1,two:2,three:3}[id]));apply(2,true);
   resetConfiguration=()=>card.querySelector('[data-variant="two"]').click();
 }
 function setupDesk(){
  const n=viewer.model.nodes;let size='200',layout='storage-right';
  const stretch={160:[21,23],200:[1,3],240:[17,19]};
- // All three desktop pieces sample the same physical plane. Recalculate when
- // the left section moves, including the hidden stretch variants.
+ // Recalculate world-space UV after the size or storage layout changes.
  // Match the 725 × 725 × 2550 mm box mapping in Max. World coordinates
  // keep the three desktop sections aligned as their transforms change.
  const woodMeshes=[];viewer.model.root.traverse(mesh=>{
@@ -109,21 +121,25 @@ function setupDesk(){
      point.fromBufferAttribute(positions,i).applyMatrix4(mesh.matrixWorld);
      normal.fromBufferAttribute(normals,i).applyMatrix3(normalMatrix).normalize();
      const ax=Math.abs(normal.x),ay=Math.abs(normal.y),az=Math.abs(normal.z);
-     if(ay>=ax&&ay>=az)uv.setXY(i,point.z/.725,point.x/2.55);
-     else if(az>=ax)uv.setXY(i,point.y/.725,point.x/2.55);
-     else uv.setXY(i,point.y/.725,point.z/2.55);
+     const part=semanticNode(mesh).name;
+     if(ay>=ax&&ay>=az){
+       // The desktop grain runs along its length; the cabinet grain follows
+       // its depth as in the reference image.
+       uv.setXY(i,part.startsWith('Keson')?point.x/.725:point.z/.725,part.startsWith('Keson')?point.z/2.55:point.x/2.55);
+     }else if(az>=ax)uv.setXY(i,point.x/.725,point.y/2.55);
+     else uv.setXY(i,point.z/.725,point.y/2.55);
    }
    uv.needsUpdate=true;
  }};
  // LeftSide also includes the left storage body and drawer fronts.
  const moving=[9,11,13,29,31].map(id=>n[id]);const origins=moving.map(node=>node.position.clone());
- const apply=()=>{Object.entries(stretch).forEach(([key,ids])=>ids.forEach(id=>n[id].visible=key===size));
+ const apply=(initial=false)=>{Object.entries(stretch).forEach(([key,ids])=>ids.forEach(id=>n[id].visible=key===size));
  moving.forEach((node,i)=>{node.position.copy(origins[i]);node.position.x+=(Number(size)-200)/100;});
  n[13].visible=layout!=='storage-left';n[15].visible=layout!=='storage-right';
  [25,27].forEach(id=>n[id].visible=layout==='storage-right');[29,31].forEach(id=>n[id].visible=layout==='storage-left');
- projectWood();closeWheel();viewer.reframe();updateDimensions();};
+ projectWood();closeWheel();if(initial)viewer.reframe();updateDimensions();viewer.requestUpdate();};
  const sizes=addVariantCard('Masa Ölçüsü',[{id:'160',label:'160 cm'},{id:'200',label:'200 cm'},{id:'240',label:'240 cm'}],size,id=>{size=id;apply();});
- const layouts=addVariantCard('Ayak / Keson Düzeni',[{id:'storage-right',label:'Keson Sağda'},{id:'storage-left',label:'Keson Solda'},{id:'two-legs',label:'İki Metal Ayak'}],layout,id=>{layout=id;apply();});apply();
+ const layouts=addVariantCard('Ayak / Keson Düzeni',[{id:'storage-right',label:'Keson Sağda'},{id:'storage-left',label:'Keson Solda'},{id:'two-legs',label:'İki Metal Ayak'}],layout,id=>{layout=id;apply();});apply(true);
  resetConfiguration=()=>{sizes.querySelector('[data-variant="200"]').click();layouts.querySelector('[data-variant="storage-right"]').click();};
 }
 
@@ -131,7 +147,12 @@ function inferGroup(object,material){return Object.keys(config.groups).find(key=
 function renderWheel(){const spec=config.groups[wheelGroup],pages=Math.ceil(spec.options.length/8);wheelPage=Math.max(0,Math.min(wheelPage,pages-1));const options=spec.options.slice(wheelPage*8,wheelPage*8+8);ui.wheelOptions.innerHTML='';options.forEach((option,index)=>{const theta=(-90+360*index/options.length)*Math.PI/180,button=document.createElement('button');button.className='wheel-swatch';button.style.setProperty('--x',`${Math.cos(theta)*(ui.wheel.clientWidth/2-34)}px`);button.style.setProperty('--y',`${Math.sin(theta)*(ui.wheel.clientWidth/2-34)}px`);button.style.cssText+=`;${swatch(option)}`;button.dataset.value=option.id;button.title=option.label;ui.wheelOptions.append(button);});document.querySelector('#wheel-title').textContent=spec.label;let selected;wheelObject.traverse(node=>{if(!selected)selected=targetMaterials(node,wheelGroup)[0]?.userData.finishId;});document.querySelector('#wheel-current').textContent=spec.options.find(o=>o.id===selected)?.label||'Mevcut';ui.wheelOptions.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.value===selected));document.querySelector('#wheel-prev').disabled=wheelPage===0;document.querySelector('#wheel-next').disabled=wheelPage===pages-1;ui.wheel.querySelector('.wheel-pages').hidden=pages<2;document.querySelector('#wheel-page').textContent=`${wheelPage+1} / ${pages}`;}
 function closeWheel(){ui.wheel.hidden=true;wheelGroup=null;wheelObject=null;}
 function openWheel(key,object,x,y){wheelGroup=key;wheelObject=semanticNode(object);wheelPage=0;const box=ui.wheel.parentElement.getBoundingClientRect(),radius=matchMedia('(max-width:500px)').matches?125:147;ui.wheel.style.left=`${Math.max(radius,Math.min(x-box.left,box.width-radius))}px`;ui.wheel.style.top=`${Math.max(radius+25,Math.min(y-box.top,box.height-radius-30))}px`;ui.wheel.hidden=false;renderWheel();}
-ui.wheelOptions.addEventListener('click',event=>{const button=event.target.closest('[data-value]');if(button&&wheelGroup&&wheelObject)applyGroup(wheelGroup,choice(wheelGroup,button.dataset.value),wheelObject).then(()=>{if(wheelGroup)renderWheel();});});
+ui.wheelOptions.addEventListener('click',event=>{const button=event.target.closest('[data-value]');if(!button||!wheelGroup||!wheelObject)return;
+ const key=wheelGroup,option=choice(key,button.dataset.value);
+ // A finish selected from the model covers the entire named product part,
+ // including hidden size variants and the mirrored cabinet.
+ state[key]=option.id;updateText();applyGroup(key,option).then(()=>{if(wheelGroup===key)renderWheel();});
+});
 const wheelHandle=document.querySelector('#wheel-drag');let dragWheel=null;
 wheelHandle.addEventListener('pointerdown',event=>{event.preventDefault();wheelHandle.setPointerCapture(event.pointerId);dragWheel={x:event.clientX,y:event.clientY,left:parseFloat(ui.wheel.style.left),top:parseFloat(ui.wheel.style.top)};});
 wheelHandle.addEventListener('pointermove',event=>{if(!dragWheel)return;const area=ui.wheel.parentElement.getBoundingClientRect(),radius=ui.wheel.offsetWidth/2;ui.wheel.style.left=`${Math.max(radius,Math.min(area.width-radius,dragWheel.left+event.clientX-dragWheel.x))}px`;ui.wheel.style.top=`${Math.max(radius,Math.min(area.height-radius,dragWheel.top+event.clientY-dragWheel.y))}px`;});

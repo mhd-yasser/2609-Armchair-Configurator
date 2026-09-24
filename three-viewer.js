@@ -48,7 +48,7 @@ export function createViewer(element){
     light.position.set(...p.position);light.shadow.intensity=p.shadow;light.castShadow=shadowsEnabled;
     renderer.toneMappingExposure=p.exposure;scene.environmentIntensity=p.environment;renderer.shadowMap.needsUpdate=true;
   }
-  let sourceNodes=[],object=null,ground=null,materialAdapters=[],radius=3,baseRadius=3,environmentUrl='',darkScene=false,measurementBoxes=null;
+  let sourceNodes=[],object=null,ground=null,materialAdapters=[],radius=3,baseRadius=3,environmentUrl='',darkScene=false;
   const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
   const moduleRoot=new URL('./',import.meta.url);
   const draco=new DRACOLoader();draco.setDecoderPath(new URL('vendor/addons/libs/draco/',moduleRoot).href);
@@ -134,14 +134,6 @@ export function createViewer(element){
       if(ground){scene.remove(ground);ground.geometry.dispose();ground.material.dispose();}
       object=gltf.scene;sourceNodes=await gltf.parser.getDependencies('node');sourceNodes.forEach((node,index)=>{node.userData.sourceNodeIndex=index;node.userData.sourceName=gltf.parser.json.nodes[index].name||'';});scene.add(object);
       object.updateWorldMatrix(true,true);
-      const deskBox=new THREE.Box3(),cabinetBox=new THREE.Box3();
-      object.traverse(node=>{if(!node.isMesh)return;const names=[node.material].flat().map(material=>material?.name);
-        if(names.some(name=>['VREEL_desktop','VREEL_cabinet','VREEL_cabinet_fronts','VREEL_deskMetal','VREEL_frontPanel'].includes(name)))deskBox.expandByObject(node);
-        if(names.some(name=>['VREEL_cabinet','VREEL_cabinet_fronts'].includes(name)))cabinetBox.expandByObject(node);
-      });
-      measurementBoxes=document.body.dataset.product==='desk'
-        ?{desk:deskBox.isEmpty()?new THREE.Box3().setFromObject(object):deskBox,cabinet:cabinetBox}
-        :{product:new THREE.Box3().setFromObject(object)};
       const materials=new Map();
       object.traverse(node=>{if(!node.isMesh)return;node.castShadow=true;node.receiveShadow=true;
         for(const material of [node.material].flat())if(material)materials.set(material.name,material);
@@ -216,10 +208,23 @@ export function createViewer(element){
   element.panView=direction=>{const right=new THREE.Vector3().setFromMatrixColumn(camera.matrix,0);const amount=radius*.08*direction;camera.position.addScaledVector(right,amount);controls.target.addScaledVector(right,amount);controls.update();};
   element.getDimensions=()=>{if(!object)return null;const box=visibleBox(),d=box.getSize(new THREE.Vector3());return {x:d.x*100,y:d.y*100,z:d.z*100,width:d.x,depth:d.z,height:d.y};};
   element.setDimensionsVisible=visible=>{dimensionGroup.visible=Boolean(visible);if(visible)refreshDimensions();};
-  element.getMeasurementGuides=()=>{if(!measurementBoxes)return null;
+  element.getMeasurementGuides=()=>{if(!object)return null;
+    // Measure visible geometry each time: a hidden sofa module or desk size
+    // variant must never contribute to the displayed dimensions.
+    const boxes={};
+    if(document.body.dataset.product==='desk'){
+      boxes.desk=new THREE.Box3();boxes.cabinet=new THREE.Box3();
+      object.updateWorldMatrix(true,true);
+      object.traverseVisible(node=>{if(!node.isMesh)return;
+        const names=[];for(let part=node;part;part=part.parent)names.push(part.userData.sourceName||part.name||'');
+        const isCabinet=names.some(name=>name.startsWith('KesonUnit'));
+        if(isCabinet)boxes.cabinet.expandByObject(node);
+        if(isCabinet||names.some(name=>/^(Top|Leg|FrontPanel)/.test(name)))boxes.desk.expandByObject(node);
+      });
+    }else boxes.product=visibleBox();
     const project=(x,y,z)=>{const p=new THREE.Vector3(x,y,z).project(camera);return {x:(p.x+1)*element.clientWidth/2,y:(1-p.y)*element.clientHeight/2};};
     const guides=[];
-    for(const [part,box] of Object.entries(measurementBoxes)){if(box.isEmpty())continue;const d=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
+    for(const [part,box] of Object.entries(boxes)){if(box.isEmpty())continue;const d=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
       const nearX=camera.position.x>=center.x?box.max.x:box.min.x;
       const nearZ=camera.position.z>=center.z?box.max.z:box.min.z;
       const screenCenter=project(center.x,center.y,center.z);
