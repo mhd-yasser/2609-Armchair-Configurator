@@ -133,9 +133,9 @@ function setupDesk(){
        const depthGrain=cabinet||part.startsWith('Leg');
        uv.setXY(i,cabinet?(point.x-bounds.min.x)/cabinetWidth:depthGrain?point.x/.725:point.z/.725,depthGrain?point.z/2.55:point.x/2.55);
      }else if(az>=ax)uv.setXY(i,cabinet?(point.x-bounds.min.x)/cabinetWidth:point.x/.725,point.y/2.55);
-     // Use one veneer strip across the long cabinet face. The source bitmap
-     // contains two similar grain features side by side; tiling repeats both.
-     else uv.setXY(i,cabinet?(point.z-bounds.min.z)/cabinetLength*.5:point.z/.725,point.y/2.55);
+     // Map the complete veneer image across the cabinet back, rather than
+     // magnifying its center and producing oversized grain.
+     else uv.setXY(i,cabinet?(point.z-bounds.min.z)/cabinetLength:point.z/.725,point.y/2.55);
    }
    uv.needsUpdate=true;
  }};
