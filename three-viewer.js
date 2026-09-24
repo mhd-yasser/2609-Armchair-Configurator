@@ -39,15 +39,16 @@ export function createViewer(element){
   rim.position.set(1,7,5);scene.add(rim);
   const ambient=new THREE.HemisphereLight(0xffffff,0xd7dce2,1.15);scene.add(ambient);
   const lightingPresets={
-    default:{key:3.2,fill:1.35,rim:.45,ambient:1.35,exposure:1.08,environment:.65,position:[-2,10,5],shadow:.65},
-    studio:{key:4.4,fill:1.7,rim:.65,ambient:1.15,exposure:1.12,environment:.55,position:[-2.8,11,4],shadow:.72},
-    cinematic:{key:4.1,fill:.95,rim:1.25,ambient:.85,exposure:1.03,environment:.4,position:[-3.5,10,3],shadow:.78}
+    default:{key:3.2,fill:1.1,rim:.45,ambient:.85,exposure:1.08,environment:.8,position:[-2,10,5],shadow:.68},
+    studio:{key:3.75,fill:1,rim:.55,ambient:.78,exposure:1.1,environment:1,position:[-2.8,11,4],shadow:.76},
+    cinematic:{key:3.6,fill:.65,rim:1,ambient:.58,exposure:1.04,environment:.8,position:[-3.5,10,3],shadow:.8}
   };
   let lightingMode='studio',shadowsEnabled=true;
   function applyLighting(){const p=lightingPresets[lightingMode];light.intensity=p.key;fill.intensity=p.fill;rim.intensity=p.rim;ambient.intensity=p.ambient;
     light.position.set(...p.position);light.shadow.intensity=p.shadow;light.castShadow=shadowsEnabled;
     renderer.toneMappingExposure=p.exposure;scene.environmentIntensity=p.environment;renderer.shadowMap.needsUpdate=true;
   }
+  applyLighting();
   let sourceNodes=[],object=null,ground=null,materialAdapters=[],radius=3,baseRadius=3,environmentUrl='',darkScene=false;
   const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
   const moduleRoot=new URL('./',import.meta.url);
