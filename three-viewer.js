@@ -75,10 +75,11 @@ export function createViewer(element){
   const dimensionGroup=new THREE.Group();scene.add(dimensionGroup);dimensionGroup.visible=false;
   let dimensionSignature='';
   function dimensionLabel(value){
-    const canvas=document.createElement('canvas');canvas.width=256;canvas.height=80;
-    const context=canvas.getContext('2d');context.fillStyle='rgba(255,255,255,.95)';context.fillRect(2,5,252,70);
-    context.strokeStyle='#b68a4c';context.lineWidth=2;context.strokeRect(2,5,252,70);
-    context.fillStyle='#0f1b2d';context.font='bold 36px Arial';context.textAlign='center';context.textBaseline='middle';context.fillText(value,128,40);
+    const canvas=document.createElement('canvas');canvas.width=192;canvas.height=64;
+    const context=canvas.getContext('2d');context.beginPath();context.roundRect(2,5,188,54,12);
+    context.fillStyle='rgba(255,255,255,.95)';context.fill();
+    context.strokeStyle='#b68a4c';context.lineWidth=1.5;context.stroke();
+    context.fillStyle='#0f1b2d';context.font='bold 28px Arial';context.textAlign='center';context.textBaseline='middle';context.fillText(value,96,32);
     const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
     const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,depthTest:false,depthWrite:false}));sprite.renderOrder=12;
     return sprite;
@@ -108,8 +109,9 @@ export function createViewer(element){
         segments.push(axis===2?[px-t,py,pz,px+t,py,pz]:[px,py-t,pz,px,py+t,pz]);
       }
       const label=dimensionLabel(`${Math.round([d.x,d.z,d.y][axis]*100)} cm`);
-      label.position.set((ax+bx)/2,(ay+by)/2,(az+bz)/2);
-      label.scale.set(margin*2.8,margin*.88,1);dimensionGroup.add(label);
+      const ratio=axis===1?.7:.5;
+      label.position.set(ax+(bx-ax)*ratio,(ay+by)/2-(axis===1?margin*.22:0),az+(bz-az)*ratio);
+      label.scale.set(margin*1.65,margin*.55,1);dimensionGroup.add(label);
     }
     const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(segments.flat(),3));
     const lines=new THREE.LineSegments(geometry,new THREE.LineBasicMaterial({color:0x293747,depthTest:false,depthWrite:false,transparent:true,opacity:.9}));

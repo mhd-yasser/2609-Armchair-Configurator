@@ -63,7 +63,7 @@ function isolateMaterials(){viewer.model.root.traverse(node=>{if(!node.isMesh)re
   const clone=material.clone();clone.name=material.name;clone.userData.vreelOriginalName=material.name;clone.userData.vreelOriginal={map:material.map,color:material.color.clone(),metalness:material.metalness,roughness:material.roughness,transparent:material.transparent,opacity:material.opacity,depthWrite:material.depthWrite,roughnessMap:material.roughnessMap,metalnessMap:material.metalnessMap,normalMap:material.normalMap,bumpMap:material.bumpMap,bumpScale:material.bumpScale,side:material.side};return clone;
 });node.material=Array.isArray(node.material)?list:list[0];});}
 async function loadTexture(url,original,color=false){if(!textures.has(url))textures.set(url,viewer.createTexture(url));const base=await textures.get(url),texture=base.clone();texture.colorSpace=color?THREE.SRGBColorSpace:THREE.NoColorSpace;if(original?.map){texture.channel=original.map.channel;texture.offset.copy(original.map.offset);texture.repeat.copy(original.map.repeat);texture.center.copy(original.map.center);texture.rotation=original.map.rotation;texture.wrapS=original.map.wrapS;texture.wrapT=original.map.wrapT;}texture.needsUpdate=true;return texture;}
-function alignMaps(material,option,maps){if(!option.wood)return;for(const map of maps){if(!map)continue;map.wrapS=map.wrapT=THREE.RepeatWrapping;if(page==='desk'&&material.userData.deskTopProjection){map.offset.set(0,0);map.repeat.set(1,1);map.rotation=0;}else{map.repeat.multiplyScalar(page==='chair'?4:2);}map.needsUpdate=true;}}
+function alignMaps(material,option,maps){if(!option.wood)return;for(const map of maps){if(!map)continue;map.wrapS=map.wrapT=THREE.RepeatWrapping;if(page==='desk'&&(material.userData.deskTopProjection||material.userData.frontPanelProjection)){map.offset.set(0,0);map.repeat.set(1,1);map.rotation=0;}else{map.repeat.multiplyScalar(page==='chair'?4:2);}map.needsUpdate=true;}}
 function semanticNode(node){for(let n=node;n;n=n.parent)if(n.userData.sourceName)return n;return node;}
 function targetMaterials(node,key){const spec=config.groups[key];if(!node.isMesh||!spec.target(semanticNode(node)))return[];return [node.material].flat().filter(material=>key==='frontPanel'&&page==='desk'||spec.materials.includes(materialName(material)));}
 async function paint(node,key,option){for(const material of targetMaterials(node,key)){const original=material.userData.vreelOriginal;const revision=(material.userData.paintRevision||0)+1;material.userData.paintRevision=revision;if(option.original){material.map=original.map;material.color.copy(original.color);material.metalness=original.metalness;material.roughness=original.roughness;material.transparent=original.transparent;material.opacity=original.opacity;material.depthWrite=original.depthWrite;material.roughnessMap=original.roughnessMap;material.bumpMap=original.bumpMap;material.bumpScale=original.bumpScale;material.side=original.side;material.metalnessMap=original.metalnessMap;material.normalMap=original.normalMap;}else{const [nextMap,roughMap,bumpMap,normalMap]=await Promise.all([option.image?loadTexture(option.image,original,true):null,option.wood||option.leather?loadTexture(asset(`textures/pbr/${option.wood?option.id:'leather'}-gloss.webp`),original):null,option.wood?loadTexture(asset(`textures/pbr/${option.id}-bump.webp`),original):null,option.leather?loadTexture(asset('textures/pbr/leather-normal.webp'),original):null]);if(material.userData.paintRevision!==revision)return;material.map=nextMap;material.roughnessMap=roughMap;material.metalnessMap=null;material.normalMap=normalMap;material.normalScale.set(.3,.3);material.bumpMap=bumpMap;material.bumpScale=bumpMap?.012:0;material.side=option.glass?THREE.DoubleSide:original.side;alignMaps(material,option,[nextMap,roughMap,bumpMap]);material.color.setRGB(...(option.factor||[1,1,1]));material.metalness=option.metalness??0;material.roughness=option.roughness??.55;material.transparent=Boolean(option.glass);material.opacity=option.opacity??1;material.depthWrite=!option.glass;}material.userData.finishId=option.id;material.needsUpdate=true;}}
@@ -93,11 +93,23 @@ function setupDesk(){
    mesh.geometry=mesh.geometry.clone();tops.push(mesh);
    [mesh.material].flat().forEach(m=>{if(config.groups.desktop.materials.includes(materialName(m)))m.userData.deskTopProjection=true;});
  });
+ // The five front panels in this GLB have POSITION and NORMAL, but no UVs.
+ // Without UVs a selected wood image cannot appear; only its flat color does.
+ const panels=[];viewer.model.root.traverse(mesh=>{
+   if(!mesh.isMesh||!semanticNode(mesh).name.startsWith('FrontPanel'))return;
+   mesh.geometry=mesh.geometry.clone();panels.push(mesh);
+   [mesh.material].flat().forEach(m=>{m.userData.frontPanelProjection=true;});
+ });
  const point=new THREE.Vector3();
  const projectTops=()=>{viewer.model.root.updateMatrixWorld(true);for(const mesh of tops){
    const positions=mesh.geometry.getAttribute('position');let uv=mesh.geometry.getAttribute('uv');
    if(!uv||uv.count!==positions.count){uv=new THREE.BufferAttribute(new Float32Array(positions.count*2),2);mesh.geometry.setAttribute('uv',uv);}
    for(let i=0;i<positions.count;i++){point.fromBufferAttribute(positions,i).applyMatrix4(mesh.matrixWorld);uv.setXY(i,point.z/.75,point.x/2.4);}
+   uv.needsUpdate=true;
+ }for(const mesh of panels){
+   const positions=mesh.geometry.getAttribute('position');let uv=mesh.geometry.getAttribute('uv');
+   if(!uv||uv.count!==positions.count){uv=new THREE.BufferAttribute(new Float32Array(positions.count*2),2);mesh.geometry.setAttribute('uv',uv);}
+   for(let i=0;i<positions.count;i++){point.fromBufferAttribute(positions,i).applyMatrix4(mesh.matrixWorld);uv.setXY(i,point.x/.4,point.y/.9);}
    uv.needsUpdate=true;
  }};
  // LeftSide also includes the left storage body and drawer fronts.
