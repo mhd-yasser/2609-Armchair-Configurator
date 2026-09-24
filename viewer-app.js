@@ -214,12 +214,25 @@ function updateDimensions(){
   const guides=page==='desk'&&visible?viewer.getMeasurementGuides():null;
   viewer.setDimensionsVisible(visible&&!guides?.length);
   if(!guides?.length){overlay.replaceChildren();return;}
+  if(matchMedia('(max-width:600px)').matches){
+    const card=document.createElement('div');card.className='mobile-measurements';
+    for(const [part,title] of [['desk','Masa'],['cabinet','Keson']]){
+      const partGuides=guides.filter(guide=>guide.part===part);
+      if(!partGuides.length)continue;
+      const row=document.createElement('div');row.className='mobile-measurements-row';
+      const heading=document.createElement('strong');heading.textContent=title;row.append(heading);
+      for(const guide of partGuides){const value=document.createElement('span');value.textContent=guide.label;row.append(value);}
+      card.append(row);
+    }
+    overlay.replaceChildren(card);return;
+  }
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
   svg.setAttribute('viewBox',`0 0 ${viewer.clientWidth} ${viewer.clientHeight}`);
   for(const guide of guides){
     const {start,end,offset}=guide;
     const x1=start.x+offset.x,y1=start.y+offset.y,x2=end.x+offset.x,y2=end.y+offset.y;
-    for(const [a,b,c,d,kind] of [[x1,y1,x2,y2,'measure-main'],[start.x,start.y,x1,y1,'measure-witness'],[end.x,end.y,x2,y2,'measure-witness']]){
+    const shortWitness=(sourceX,sourceY,lineX,lineY)=>{const dx=sourceX-lineX,dy=sourceY-lineY,length=Math.hypot(dx,dy);return length?[lineX,lineY,lineX+dx*Math.min(12,length)/length,lineY+dy*Math.min(12,length)/length]:[lineX,lineY,lineX,lineY];};
+    for(const [a,b,c,d,kind] of [[x1,y1,x2,y2,'measure-main'],[...shortWitness(start.x,start.y,x1,y1),'measure-witness'],[...shortWitness(end.x,end.y,x2,y2),'measure-witness']]){
       const line=document.createElementNS('http://www.w3.org/2000/svg','line');
       line.setAttribute('x1',a);line.setAttribute('y1',b);line.setAttribute('x2',c);line.setAttribute('y2',d);line.setAttribute('class',kind);svg.append(line);
     }
