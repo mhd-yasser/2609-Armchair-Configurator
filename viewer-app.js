@@ -3,11 +3,7 @@ import {createViewer} from './three-viewer.js';
 
 const page=document.body.dataset.product;
 const viewer=createViewer(document.querySelector('#product-viewer'));
-// Keep the source GLB hidden until every configured default finish is ready.
-const viewerCanvas=viewer.querySelector('canvas');viewerCanvas.style.visibility='hidden';
 const ui={groups:document.querySelector('#material-groups'),details:document.querySelector('#material-details'),selection:document.querySelector('#selection'),notice:document.querySelector('#notice'),wheel:document.querySelector('#material-wheel'),wheelOptions:document.querySelector('#wheel-options')};
-const showEnvironmentStatus=()=>{if(new URLSearchParams(location.search).get('lightingTest')!=='1'||!document.querySelector('#model-loading').hidden)return;ui.notice.textContent=viewer.dataset.environmentStatus==='ready'?`HDRI ${viewer.dataset.environmentName} yüklendi`:viewer.dataset.environmentStatus==='error'?'HDRI yüklenemedi':'HDRI yükleniyor…';};
-new MutationObserver(showEnvironmentStatus).observe(viewer,{attributes:true,attributeFilter:['data-environment-status']});
 const asset=(path)=>new URL(path,import.meta.url).href;
 
 const leather=[
@@ -172,13 +168,11 @@ wheelHandle.addEventListener('pointerup',()=>{dragWheel=null;});wheelHandle.addE
 ui.wheel.querySelector('#wheel-close').addEventListener('click',closeWheel);document.querySelector('#wheel-prev').addEventListener('click',()=>{wheelPage--;renderWheel();});document.querySelector('#wheel-next').addEventListener('click',()=>{wheelPage++;renderWheel();});
 viewer.addEventListener('pointerdown',event=>pointerStart={x:event.clientX,y:event.clientY});viewer.addEventListener('pointerup',event=>{if(!pointerStart||Math.hypot(event.clientX-pointerStart.x,event.clientY-pointerStart.y)>7)return;const hit=viewer.materialFromPoint(event.clientX,event.clientY);const key=hit&&inferGroup(hit.object,hit);if(key)openWheel(key,hit.object,event.clientX,event.clientY);else closeWheel();});
 
-viewer.addEventListener('load',async()=>{try{isolateMaterials();if(page==='sofa')setupSofa();if(page==='desk')setupDesk();for(const key of Object.keys(config.groups))await applyGroup(key);updateText();ui.notice.textContent='';viewerCanvas.style.visibility='visible';document.querySelector('#model-loading').hidden=true;showEnvironmentStatus();}catch(error){console.error(error);ui.notice.textContent='Malzemeler yüklenemedi. Lütfen sayfayı yenileyin.';}});
+viewer.addEventListener('load',async()=>{document.querySelector('#model-loading').hidden=true;isolateMaterials();if(page==='sofa')setupSofa();if(page==='desk')setupDesk();for(const key of Object.keys(config.groups))await applyGroup(key);updateText();ui.notice.textContent='';});
 viewer.addEventListener('error',()=>{ui.notice.textContent='3D model yüklenemedi. Lütfen sayfayı yenileyin.';});viewer.addEventListener('progress',event=>{const bar=viewer.querySelector('.progress'),span=bar?.querySelector('span');if(span)span.style.width=`${event.detail.totalProgress*100}%`;if(bar)bar.hidden=event.detail.totalProgress===1;});
 async function load(){ui.notice.textContent='3D model yükleniyor…';const response=await fetch(config.file);if(!response.ok)throw new Error(response.status);modelBlob=await response.blob();viewer.src=URL.createObjectURL(modelBlob);}load().catch(error=>{console.error(error);ui.notice.textContent='3D model yüklenemedi.';});
 
-// ?hdri=02 lets us compare the previous environment with the new studio light.
-const hdri=new URLSearchParams(location.search).get('hdri')==='02'?'02':'06';
-const studio={environment:`https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/brown_photostudio_${hdri}_1k.hdr`,shadow:1.35,softness:.72};viewer.environmentImage=studio.environment;viewer.shadowIntensity=studio.shadow;viewer.shadowSoftness=studio.softness;viewer.setRotationSpeed(40);
+const studio={environment:'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/brown_photostudio_02_1k.hdr',shadow:1.35,softness:.72};viewer.environmentImage=studio.environment;viewer.shadowIntensity=studio.shadow;viewer.shadowSoftness=studio.softness;viewer.setRotationSpeed(40);
 const activate=(selector,current)=>document.querySelectorAll(selector).forEach(node=>node.classList.toggle('active',node===current));
 document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click',()=>{activate('.tab',button);document.querySelectorAll('.tab-panel').forEach(panel=>panel.classList.toggle('active',panel.id===button.dataset.tab));}));
 document.querySelector('[data-action="rotate"]').addEventListener('click',event=>{const on=event.currentTarget.getAttribute('aria-pressed')!=='true';viewer.setAutoRotate(on);event.currentTarget.setAttribute('aria-pressed',on);});document.querySelector('#rotation-speed').addEventListener('input',event=>{viewer.setRotationSpeed(event.target.value);event.target.nextElementSibling.value=`${event.target.value}°/sn`;});
