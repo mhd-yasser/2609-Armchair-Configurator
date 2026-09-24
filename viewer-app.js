@@ -99,8 +99,8 @@ function setupDesk(){
  const n=viewer.model.nodes;let size='200',layout='storage-right';
  const stretch={160:[21,23],200:[1,3],240:[17,19]};
  // Recalculate world-space UV after the size or storage layout changes.
- // Match the 725 × 725 × 2550 mm box mapping in Max. World coordinates
- // keep the three desktop sections aligned as their transforms change.
+ // World coordinates keep the three desktop sections aligned; each cabinet
+ // long face uses one image across its full length to avoid repeated knots.
  const woodMeshes=[];viewer.model.root.traverse(mesh=>{
    if(!mesh.isMesh)return;
    const name=semanticNode(mesh).userData.sourceName||semanticNode(mesh).name;
@@ -111,23 +111,31 @@ function setupDesk(){
    [mesh.material].flat().forEach(material=>{if(['Material__2147483063','Material__2147482989','MDFBlack'].includes(materialName(material)))material.userData.boxWoodProjection=true;});
  });
  const point=new THREE.Vector3(),normal=new THREE.Vector3(),normalMatrix=new THREE.Matrix3();
- const projectWood=()=>{viewer.model.root.updateMatrixWorld(true);for(const mesh of woodMeshes){
+ const projectWood=()=>{viewer.model.root.updateMatrixWorld(true);const cabinetBounds=new Map();for(const mesh of woodMeshes){
    const positions=mesh.geometry.getAttribute('position'),normals=mesh.geometry.getAttribute('normal');
    if(!normals)continue;
    let uv=mesh.geometry.getAttribute('uv');
    if(!uv||uv.count!==positions.count){uv=new THREE.BufferAttribute(new Float32Array(positions.count*2),2);mesh.geometry.setAttribute('uv',uv);}
    normalMatrix.getNormalMatrix(mesh.matrixWorld);
+   const owner=semanticNode(mesh),part=owner.userData.sourceName||owner.name;
+   const cabinet=part.startsWith('Keson');
+   if(cabinet&&!cabinetBounds.has(owner))cabinetBounds.set(owner,new THREE.Box3().setFromObject(owner));
+   const bounds=cabinet?cabinetBounds.get(owner):null;
+   const cabinetLength=bounds?Math.max(bounds.max.z-bounds.min.z,.725):0;
+   const cabinetWidth=bounds?Math.max(bounds.max.x-bounds.min.x,.725):0;
    for(let i=0;i<positions.count;i++){
      point.fromBufferAttribute(positions,i).applyMatrix4(mesh.matrixWorld);
      normal.fromBufferAttribute(normals,i).applyMatrix3(normalMatrix).normalize();
      const ax=Math.abs(normal.x),ay=Math.abs(normal.y),az=Math.abs(normal.z);
-     const part=semanticNode(mesh).userData.sourceName||semanticNode(mesh).name;
      if(ay>=ax&&ay>=az){
-       // The desktop grain runs along its length; the cabinet grain follows
-       // its depth as in the reference image.
-       uv.setXY(i,part.startsWith('Keson')?point.x/.725:point.z/.725,part.startsWith('Keson')?point.z/2.55:point.x/2.55);
-     }else if(az>=ax)uv.setXY(i,point.x/.725,point.y/2.55);
-     else uv.setXY(i,point.z/.725,point.y/2.55);
+       // Cabinet and wooden leg top grain follows their depth, while the
+       // three connected desktop pieces keep their grain along the length.
+       const depthGrain=cabinet||part.startsWith('Leg');
+       uv.setXY(i,cabinet?(point.x-bounds.min.x)/cabinetWidth:depthGrain?point.x/.725:point.z/.725,depthGrain?point.z/2.55:point.x/2.55);
+     }else if(az>=ax)uv.setXY(i,cabinet?(point.x-bounds.min.x)/cabinetWidth:point.x/.725,point.y/2.55);
+     // Use one veneer strip across the long cabinet face. The source bitmap
+     // contains two similar grain features side by side; tiling repeats both.
+     else uv.setXY(i,cabinet?(point.z-bounds.min.z)/cabinetLength*.5:point.z/.725,point.y/2.55);
    }
    uv.needsUpdate=true;
  }};
