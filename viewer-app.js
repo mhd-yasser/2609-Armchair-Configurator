@@ -211,12 +211,12 @@ buildMaterials();
 
 function updateDimensions(){
   const overlay=document.querySelector('#dimensions-overlay'),visible=!overlay.hidden;
-  const guides=page==='desk'&&visible?viewer.getMeasurementGuides():null;
+  const guides=visible?viewer.getMeasurementGuides():null;
   viewer.setDimensionsVisible(visible&&!guides?.length);
   if(!guides?.length){overlay.replaceChildren();return;}
   if(matchMedia('(max-width:600px)').matches){
     const card=document.createElement('div');card.className='mobile-measurements';
-    for(const [part,title] of [['desk','Masa'],['cabinet','Keson']]){
+    for(const [part,title] of [['desk','Masa'],['cabinet','Keson'],['product',page==='chair'?'Koltuk':'Kanepe']]){
       const partGuides=guides.filter(guide=>guide.part===part);
       if(!partGuides.length)continue;
       const row=document.createElement('div');row.className='mobile-measurements-row';
