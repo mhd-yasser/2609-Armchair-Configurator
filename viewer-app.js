@@ -155,42 +155,49 @@ document.querySelector('#source-download').addEventListener('click',()=>sourceMo
 document.querySelector('[data-close-source]').addEventListener('click',()=>sourceModal.hidden=true);
 document.querySelector('#source-form').addEventListener('submit',event=>{event.preventDefault();document.querySelector('#source-downloads').hidden=false;document.querySelector('#source-status').textContent='';});
 document.querySelectorAll('[data-source-format]').forEach(button=>button.addEventListener('click',()=>{const format=button.dataset.sourceFormat;const path=`${page}/files/${format}/${config.download.replace(/\.glb$/i,format==='max'?'.max':`.${format}`)}`;fetch(`../${path}`,{method:'HEAD'}).then(response=>{if(!response.ok)throw new Error('missing');const link=document.createElement('a');link.href=`../${path}`;link.download='';link.click();document.querySelector('#source-status').textContent='';}).catch(()=>document.querySelector('#source-status').textContent=`${button.textContent.replace(' İndir','')} dosyası henüz hazır değil.`);}));
-let pdfPreviewUrl=null,pdfFontBase64=null;
-async function getPdfFont(){
-  if(pdfFontBase64)return pdfFontBase64;
-  const response=await fetch('../fonts/Alexandria-Regular.ttf');
-  if(!response.ok)throw new Error('PDF font unavailable');
-  const bytes=new Uint8Array(await response.arrayBuffer());
-  let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));
-  return pdfFontBase64=btoa(binary);
+async function makeProductSheet(){
+  await document.fonts.load('700 42px Alexandria');
+  await document.fonts.load('400 24px Alexandria');
+  await document.fonts.load('600 23px Alexandria');
+  const image=new Image();image.src=viewer.toDataURL();await image.decode();
+  const canvas=document.createElement('canvas');canvas.width=1240;canvas.height=1754;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,1240,1754);
+  ctx.fillStyle='#0f1b2d';ctx.fillRect(0,0,1240,148);
+  ctx.fillStyle='#fff';ctx.font='700 52px Alexandria';ctx.fillText('VREEL',82,93);
+  ctx.fillStyle='#dbbc88';ctx.font='600 23px Alexandria';ctx.fillText('ETKİLEŞİMLİ TASARIM',312,91);
+  ctx.fillStyle='#b68a4c';ctx.fillRect(82,183,62,4);
+  ctx.fillStyle='#0f1b2d';ctx.font='700 43px Alexandria';ctx.fillText(config.title,82,270);
+  ctx.fillStyle='#697383';ctx.font='400 23px Alexandria';ctx.fillText('ÜRÜN TEKNİK FÖYÜ',82,311);
+  ctx.fillStyle='#f3f5f6';ctx.fillRect(82,356,1076,665);
+  // Crop excess viewer background while preserving the entire object in the central frame.
+  const cropWidth=image.width*.86,cropHeight=image.height*.86;
+  const scale=Math.min(1030/cropWidth,620/cropHeight);
+  const width=cropWidth*scale,height=cropHeight*scale;
+  ctx.drawImage(image,(image.width-cropWidth)/2,(image.height-cropHeight)/2,cropWidth,cropHeight,82+(1076-width)/2,356+(665-height)/2,width,height);
+  ctx.fillStyle='#b68a4c';ctx.fillRect(82,1087,1076,3);
+  ctx.fillStyle='#0f1b2d';ctx.font='700 29px Alexandria';ctx.fillText('Seçilen Malzemeler',82,1150);
+  const rows=Object.entries(config.groups).map(([key,spec])=>[spec.label,choice(key).label]);
+  rows.forEach(([name,value],index)=>{
+    const y=1210+index*70;
+    ctx.fillStyle='#697383';ctx.font='400 21px Alexandria';ctx.fillText(name,82,y,435);
+    ctx.fillStyle='#0f1b2d';ctx.font='600 21px Alexandria';ctx.fillText(value,505,y,645);
+    ctx.fillStyle='#e2e5e9';ctx.fillRect(82,y+21,1076,2);
+  });
+  ctx.fillStyle='#697383';ctx.font='400 19px Alexandria';
+  ctx.fillText(`Oluşturma tarihi: ${new Date().toLocaleDateString('tr-TR')}`,82,1669);
+  ctx.textAlign='right';ctx.fillText('VREEL tarafından geliştirilen etkileşimli ürün deneyimi',1158,1669);
+  const preview=canvas.toDataURL('image/jpeg',.94);
+  const pdf=new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  pdf.addImage(preview,'JPEG',0,0,210,297,undefined,'FAST');
+  return {pdf,preview};
 }
 document.querySelector('#datasheet').addEventListener('click',async()=>{
   const button=document.querySelector('#datasheet');button.disabled=true;
   try{
-    const font=await getPdfFont(),{jsPDF}=window.jspdf,pdf=new jsPDF({unit:'mm',format:'a4'});
-    pdf.addFileToVFS('Alexandria-Regular.ttf',font);pdf.addFont('Alexandria-Regular.ttf','Alexandria','normal');pdf.setFont('Alexandria');
-    pdf.setFillColor(15,27,45);pdf.rect(0,0,210,28,'F');
-    pdf.setTextColor(255,255,255);pdf.setFontSize(17);pdf.text('VREEL',16,19);
-    pdf.setTextColor(15,27,45);pdf.setFontSize(17);pdf.text(config.title,16,44);
-    pdf.setFontSize(9);pdf.setTextColor(105,115,131);pdf.text('ÜRÜN TEKNİK FÖYÜ',16,51);
-    const image=viewer.toDataURL(),bitmap=new Image();bitmap.src=image;await bitmap.decode();
-    const maxWidth=178,maxHeight=112,ratio=Math.min(maxWidth/bitmap.naturalWidth,maxHeight/bitmap.naturalHeight);
-    const width=bitmap.naturalWidth*ratio,height=bitmap.naturalHeight*ratio;
-    pdf.setFillColor(247,248,249);pdf.roundedRect(16,58,178,116,2,2,'F');
-    pdf.addImage(image,'PNG',16+(178-width)/2,60+(112-height)/2,width,height,undefined,'FAST');
-    pdf.setDrawColor(222,226,232);pdf.line(16,183,194,183);
-    pdf.setTextColor(15,27,45);pdf.setFontSize(10);pdf.text('Seçilen Malzemeler',16,193);
-    pdf.setFontSize(8.5);let y=202;
-    for(const [key,spec] of Object.entries(config.groups)){
-      const lines=pdf.splitTextToSize(`${spec.label}: ${choice(key).label}`,174);
-      if(y+lines.length*6>281){pdf.addPage();y=22;}
-      pdf.text(lines,18,y);y+=lines.length*6+2;
-    }
-    pdfDocument=pdf;
-    if(pdfPreviewUrl)URL.revokeObjectURL(pdfPreviewUrl);
-    pdfPreviewUrl=URL.createObjectURL(pdf.output('blob'));
-    const frame=document.createElement('iframe');frame.src=pdfPreviewUrl;frame.title='Ürün teknik föyü önizlemesi';
-    document.querySelector('#pdf-preview').replaceChildren(frame);
+    const {pdf,preview}=await makeProductSheet();pdfDocument=pdf;
+    const img=document.createElement('img');img.src=preview;img.alt='Ürün teknik föyü önizlemesi';
+    document.querySelector('#pdf-preview').replaceChildren(img);
     document.querySelector('#pdf-modal').hidden=false;
   }catch(error){console.error(error);ui.notice.textContent='PDF teknik föyü oluşturulamadı.';}
   finally{button.disabled=false;}
