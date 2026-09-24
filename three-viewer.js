@@ -72,6 +72,49 @@ export function createViewer(element){
     return {name:material.name,raw:material,pbrMetallicRoughness:pbr,setAlphaMode(mode){material.transparent=mode==='BLEND';material.needsUpdate=true;}};
   }
   function visibleBox(root=object){const box=new THREE.Box3();if(!root)return box;root.updateWorldMatrix(true,true);root.traverseVisible(node=>{if(node.isMesh){node.geometry.computeBoundingBox();box.union(node.geometry.boundingBox.clone().applyMatrix4(node.matrixWorld));}});return box;}
+  const dimensionGroup=new THREE.Group();scene.add(dimensionGroup);dimensionGroup.visible=false;
+  let dimensionSignature='';
+  function dimensionLabel(value){
+    const canvas=document.createElement('canvas');canvas.width=256;canvas.height=80;
+    const context=canvas.getContext('2d');context.fillStyle='rgba(255,255,255,.95)';context.fillRect(2,5,252,70);
+    context.strokeStyle='#b68a4c';context.lineWidth=2;context.strokeRect(2,5,252,70);
+    context.fillStyle='#0f1b2d';context.font='bold 36px Arial';context.textAlign='center';context.textBaseline='middle';context.fillText(value,128,40);
+    const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+    const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,depthTest:false,depthWrite:false}));sprite.renderOrder=12;
+    return sprite;
+  }
+  function refreshDimensions(){
+    if(!dimensionGroup.visible||!object)return;
+    const box=visibleBox();if(box.isEmpty())return;
+    const d=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
+    const sx=camera.position.x>=center.x?1:-1,sz=camera.position.z>=center.z?1:-1;
+    const signature=[...box.min.toArray(),...box.max.toArray(),sx,sz].map(v=>v.toFixed(3)).join(',');
+    if(signature===dimensionSignature)return;dimensionSignature=signature;
+    while(dimensionGroup.children.length){const child=dimensionGroup.children[0];dimensionGroup.remove(child);child.geometry?.dispose();child.material?.map?.dispose();child.material?.dispose();}
+    const margin=Math.max(d.x,d.z)*.075,foot=box.min.y-margin*.4;
+    const x= sx>0?box.max.x:box.min.x,z=sz>0?box.max.z:box.min.z;
+    const X=(a,b)=>[a,foot,z+sz*margin,b,foot,z+sz*margin];
+    const Z=(a,b)=>[x+sx*margin,foot,a,x+sx*margin,foot,b];
+    const Y=(a,b)=>[x+sx*margin*1.7,a,z+sz*margin*1.7,x+sx*margin*1.7,b,z+sz*margin*1.7];
+    const guides=[X(box.min.x,box.max.x),Z(box.min.z,box.max.z),Y(box.min.y,box.max.y)];
+    const segments=[...guides];
+    for(const [axis,segment] of guides.entries()){
+      const [ax,ay,az,bx,by,bz]=segment;
+      if(axis===0){segments.push([box.min.x,foot,z,ax,ay,az],[box.max.x,foot,z,bx,by,bz]);}
+      if(axis===1){segments.push([x,foot,box.min.z,ax,ay,az],[x,foot,box.max.z,bx,by,bz]);}
+      if(axis===2){segments.push([x,box.min.y,z,ax,ay,az],[x,box.max.y,z,bx,by,bz]);}
+      for(const [px,py,pz] of [[ax,ay,az],[bx,by,bz]]){
+        const t=margin*.16;
+        segments.push(axis===2?[px-t,py,pz,px+t,py,pz]:[px,py-t,pz,px,py+t,pz]);
+      }
+      const label=dimensionLabel(`${Math.round([d.x,d.z,d.y][axis]*100)} cm`);
+      label.position.set((ax+bx)/2,(ay+by)/2,(az+bz)/2);
+      label.scale.set(margin*2.8,margin*.88,1);dimensionGroup.add(label);
+    }
+    const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(segments.flat(),3));
+    const lines=new THREE.LineSegments(geometry,new THREE.LineBasicMaterial({color:0x293747,depthTest:false,depthWrite:false,transparent:true,opacity:.9}));
+    lines.renderOrder=11;dimensionGroup.add(lines);
+  }
   function reframe(){
     if(!object)return;
     object.updateWorldMatrix(true,true);
@@ -168,6 +211,7 @@ export function createViewer(element){
     finally{renderer.setPixelRatio(oldRatio);renderer.setSize(oldSize.x,oldSize.y,false);camera.aspect=oldAspect;camera.updateProjectionMatrix();}}
   element.panView=direction=>{const right=new THREE.Vector3().setFromMatrixColumn(camera.matrix,0);const amount=radius*.08*direction;camera.position.addScaledVector(right,amount);controls.target.addScaledVector(right,amount);controls.update();};
   element.getDimensions=()=>{if(!object)return null;const box=visibleBox(),d=box.getSize(new THREE.Vector3());return {x:d.x*100,y:d.y*100,z:d.z*100,width:d.x,depth:d.z,height:d.y};};
+  element.setDimensionsVisible=visible=>{dimensionGroup.visible=Boolean(visible);if(visible)refreshDimensions();};
   element.getMeasurementGuides=()=>{if(!measurementBoxes)return null;
     const project=(x,y,z)=>{const p=new THREE.Vector3(x,y,z).project(camera);return {x:(p.x+1)*element.clientWidth/2,y:(1-p.y)*element.clientHeight/2};};
     const guides=[];
