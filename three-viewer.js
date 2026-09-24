@@ -162,7 +162,9 @@ export function createViewer(element){
       texture.mapping=THREE.EquirectangularReflectionMapping;
       const old=scene.environment;scene.environment=texture;scene.environmentIntensity=lightingPresets[lightingMode].environment;scene.environmentRotation.y=THREE.MathUtils.degToRad(25);
       if(old)old.dispose();
-    },undefined,error=>console.warn('Studio environment unavailable',error));
+    },undefined,error=>{console.warn('Studio environment unavailable',error);
+      if(url.includes('brown_photostudio_06_'))environment(url.replace('brown_photostudio_06_','brown_photostudio_02_'));
+    });
   }
   function fromPoint(x,y){if(!object)return null;const rect=renderer.domElement.getBoundingClientRect();
     pointer.set((x-rect.left)/rect.width*2-1,-(y-rect.top)/rect.height*2+1);raycaster.setFromCamera(pointer,camera);
