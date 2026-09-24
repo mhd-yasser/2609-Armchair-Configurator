@@ -167,7 +167,7 @@ export function createViewer(element){
     new RGBELoader().load(url,texture=>{
       if(url!==environmentUrl){texture.dispose();return;}
       texture.mapping=THREE.EquirectangularReflectionMapping;
-      const old=scene.environment;scene.environment=texture;scene.environmentIntensity=lightingPresets[lightingMode].environment;scene.environmentRotation.y=THREE.MathUtils.degToRad(25);element.dataset.environmentStatus='ready';
+      const old=scene.environment;scene.environment=texture;scene.environmentIntensity=lightingPresets[lightingMode].environment;scene.environmentRotation.y=THREE.MathUtils.degToRad(25);element.dataset.environmentName=url.includes('brown_photostudio_02_')?'02':'06';element.dataset.environmentStatus='ready';
       if(old)old.dispose();
     },undefined,error=>{console.warn('Studio environment unavailable',error);element.dataset.environmentStatus='error';
       if(url.includes('brown_photostudio_06_'))environment(url.replace('brown_photostudio_06_','brown_photostudio_02_'));
