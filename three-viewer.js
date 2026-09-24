@@ -43,6 +43,13 @@ export function createViewer(element){
     studio:{key:3.75,fill:1,rim:.55,ambient:.78,exposure:1.1,environment:1,position:[-2.8,11,4],shadow:.76},
     cinematic:{key:3.6,fill:.65,rim:1,ambient:.58,exposure:1.04,environment:.8,position:[-3.5,10,3],shadow:.8}
   };
+  // Opt-in comparison: give the HDRI room to shape the surfaces instead of
+  // washing it out with the directional and hemisphere fill lights.
+  if(new URLSearchParams(location.search).get('lightingTest')==='1'){
+    Object.assign(lightingPresets.default,{key:2.1,fill:.4,rim:.25,ambient:.4,environment:1.3,exposure:1.07});
+    Object.assign(lightingPresets.studio,{key:2.3,fill:.35,rim:.3,ambient:.35,environment:1.45,exposure:1.07});
+    Object.assign(lightingPresets.cinematic,{key:2.1,fill:.25,rim:.55,ambient:.3,environment:1.3,exposure:1.03});
+  }
   let lightingMode='studio',shadowsEnabled=true;
   function applyLighting(){const p=lightingPresets[lightingMode];light.intensity=p.key;fill.intensity=p.fill;rim.intensity=p.rim;ambient.intensity=p.ambient;
     light.position.set(...p.position);light.shadow.intensity=p.shadow;light.castShadow=shadowsEnabled;
@@ -156,13 +163,13 @@ export function createViewer(element){
     }catch(err){console.error(err);element.dispatchEvent(new Event('error'));}
   }
   function environment(url){
-    if(!url||url===environmentUrl)return;environmentUrl=url;
+    if(!url||url===environmentUrl)return;environmentUrl=url;element.dataset.environmentStatus='loading';
     new RGBELoader().load(url,texture=>{
       if(url!==environmentUrl){texture.dispose();return;}
       texture.mapping=THREE.EquirectangularReflectionMapping;
-      const old=scene.environment;scene.environment=texture;scene.environmentIntensity=lightingPresets[lightingMode].environment;scene.environmentRotation.y=THREE.MathUtils.degToRad(25);
+      const old=scene.environment;scene.environment=texture;scene.environmentIntensity=lightingPresets[lightingMode].environment;scene.environmentRotation.y=THREE.MathUtils.degToRad(25);element.dataset.environmentStatus='ready';
       if(old)old.dispose();
-    },undefined,error=>{console.warn('Studio environment unavailable',error);
+    },undefined,error=>{console.warn('Studio environment unavailable',error);element.dataset.environmentStatus='error';
       if(url.includes('brown_photostudio_06_'))environment(url.replace('brown_photostudio_06_','brown_photostudio_02_'));
     });
   }
