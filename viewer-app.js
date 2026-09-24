@@ -38,17 +38,17 @@ const glass=[
 const materialName=(material)=>material.userData.vreelOriginalName||material.name;
 const group=(label,materials,options,initial,target=()=>true)=>({label,materials,options,initial,target});
 const configs={
-  sofa:{title:'Lounge Duo',file:asset('sofa/model/Sofa.glb'),download:'VREEL_Lounge_Duo.glb',groups:{leather:group('Deri Yüzeyi',['Sofa_Fills_Leather_Black'],leather,'black-matte')}},
+  sofa:{title:'Lounge Duo',file:asset('sofa/model/Sofa.glb'),download:'VREEL_Lounge_Duo.glb',groups:{leather:group('Deri Yüzeyi',['Sofa_Fills_Leather_Black'],leather,'black-glossy')}},
   chair:{title:'Aura Yönetici Koltuğu',file:asset('chair/model/Chair.glb'),download:'VREEL_Aura_Yonetici_Koltugu.glb',groups:{
     leather:group('Deri Yüzeyi',['Material__2147483027'],leather,'brown-glossy'),
     wood:group('Ahşap Detay',['WD'],wood,'oak-nefrit'),
-    metal:group('Metal Detay',['MetalBlackMatte'],metal,'chrome-matte'),
+    metal:group('Metal Detay',['MetalBlackMatte'],metal,'chrome'),
   }},
   desk:{title:'Axis Executive Desk',file:asset('desk/model/Desk.glb'),download:'VREEL_Axis_Executive_Desk.glb',groups:{
     desktop:group('Masa Üstü',['Material__2147483063'],[...wood,...solids],'oak-muskat',node=>/^Top/.test(node.name)),
     woodLeg:group('Ahşap Ayaklar',['Material__2147483063'],[...wood,...solids],'oak-muskat',node=>/^Leg/.test(node.name)),
-    cabinet:group('Keson Gövdesi',['Material__2147482989','Material__2147483063'],wood,'oak-muskat',node=>node.name==='KesonUnitBody'),
-    cabinetFace:group('Keson Kapakları',['MDFBlack'],[...wood,...solids],'white',node=>node.name==='KesonUnitFaces'),
+    cabinet:group('Keson Gövdesi',['Material__2147482989','Material__2147483063'],wood,'oak-muskat',node=>(node.userData.sourceName||node.name)==='KesonUnitBody'),
+    cabinetFace:group('Keson Kapakları',['MDFBlack'],[...wood,...solids],'white',node=>(node.userData.sourceName||node.name)==='KesonUnitFaces'),
     frontPanel:group('Ön Panel',['Material__2147482989'],[...wood.filter(option=>!option.original),...solids,...glass],'frosted-clear',node=>node.name.startsWith('FrontPanel')),
     metal:group('Metal Ayaklar',['MetalBlackMatte'],metal,'white'),
   }},
@@ -103,7 +103,7 @@ function setupDesk(){
  // keep the three desktop sections aligned as their transforms change.
  const woodMeshes=[];viewer.model.root.traverse(mesh=>{
    if(!mesh.isMesh)return;
-   const name=semanticNode(mesh).name;
+   const name=semanticNode(mesh).userData.sourceName||semanticNode(mesh).name;
    if(!/^(Top|Leg|FrontPanel|KesonUnitBody|KesonUnitFaces)/.test(name))return;
    const materialNames=[mesh.material].flat().map(materialName);
    if(!materialNames.some(value=>['Material__2147483063','Material__2147482989','MDFBlack'].includes(value)))return;
@@ -121,7 +121,7 @@ function setupDesk(){
      point.fromBufferAttribute(positions,i).applyMatrix4(mesh.matrixWorld);
      normal.fromBufferAttribute(normals,i).applyMatrix3(normalMatrix).normalize();
      const ax=Math.abs(normal.x),ay=Math.abs(normal.y),az=Math.abs(normal.z);
-     const part=semanticNode(mesh).name;
+     const part=semanticNode(mesh).userData.sourceName||semanticNode(mesh).name;
      if(ay>=ax&&ay>=az){
        // The desktop grain runs along its length; the cabinet grain follows
        // its depth as in the reference image.
