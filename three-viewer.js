@@ -43,7 +43,7 @@ export function createViewer(element){
     studio:{key:3.75,fill:1,rim:.55,ambient:.78,exposure:1.1,environment:1,position:[-2.8,11,4],shadow:.76},
     cinematic:{key:3.6,fill:.65,rim:1,ambient:.58,exposure:1.04,environment:.8,position:[-3.5,10,3],shadow:.8}
   };
-  let lightingMode='studio',shadowsEnabled=true;
+  let lightingMode='cinematic',shadowsEnabled=true;
   function applyLighting(){const p=lightingPresets[lightingMode];light.intensity=p.key;fill.intensity=p.fill;rim.intensity=p.rim;ambient.intensity=p.ambient;
     light.position.set(...p.position);light.shadow.intensity=p.shadow;light.castShadow=shadowsEnabled;
     renderer.toneMappingExposure=p.exposure;scene.environmentIntensity=p.environment;renderer.shadowMap.needsUpdate=true;
