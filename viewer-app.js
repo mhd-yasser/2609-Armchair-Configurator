@@ -191,6 +191,22 @@ document.querySelectorAll('.tab').forEach(button=>button.addEventListener('click
 document.querySelector('[data-action="rotate"]').addEventListener('click',event=>{const on=event.currentTarget.getAttribute('aria-pressed')!=='true';viewer.setAutoRotate(on);event.currentTarget.setAttribute('aria-pressed',on);});document.querySelector('#rotation-speed').addEventListener('input',event=>{viewer.setRotationSpeed(event.target.value);event.target.nextElementSibling.value=`${event.target.value}°/sn`;});
 document.querySelectorAll('[data-lighting]').forEach(button=>button.addEventListener('click',()=>{viewer.lightingPreset=button.dataset.lighting;document.querySelectorAll('[data-lighting]').forEach(node=>node.setAttribute('aria-pressed',node===button));}));const lighting=document.querySelector('.lighting-presets');document.querySelector('[data-action="lighting-menu"]').addEventListener('click',()=>lighting.hidden=!lighting.hidden);
 document.querySelector('[data-action="fullscreen"]').addEventListener('click',()=>document.fullscreenElement?document.exitFullscreen():viewer.parentElement.requestFullscreen());document.querySelector('[data-action="reset"]').addEventListener('click',()=>viewer.reframe());document.querySelector('[data-action="zoom-in"]').addEventListener('click',()=>{const o=viewer.getCameraOrbit();viewer.cameraOrbit=`${o.theta}rad ${o.phi}rad ${o.radius*.82}m`;});document.querySelector('[data-action="zoom-out"]').addEventListener('click',()=>{const o=viewer.getCameraOrbit();viewer.cameraOrbit=`${o.theta}rad ${o.phi}rad ${o.radius*1.22}m`;});document.querySelector('[data-action="pan-left"]').addEventListener('click',()=>viewer.panView(-1));document.querySelector('[data-action="pan-right"]').addEventListener('click',()=>viewer.panView(1));document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>{const views={front:'0deg 75deg auto',side:'90deg 75deg auto',top:'0deg 10deg auto'};viewer.cameraOrbit=views[button.dataset.view];activate('[data-view]',button);}));
+const arButton=document.querySelector('[data-action="ar"]);
+if(page==='chair'){
+  arButton.disabled=false;
+  arButton.title='AR ile odanızda görüntüleyin';
+  arButton.setAttribute('aria-label','Artırılmış gerçeklikte görüntüle');
+  arButton.addEventListener('click',()=>{
+    const modelUrl=new URL(config.file,location.href).href;
+    const fallbackUrl=location.href;
+    if(/Android/i.test(navigator.userAgent)){
+      const query=new URLSearchParams({file:modelUrl,mode:'ar_preferred',title:config.title,resizable:'false'}).toString();
+      location.href=`intent://arvr.google.com/scene-viewer/1.1?${query}#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;S.browser_fallback_url=${encodeURIComponent(fallbackUrl)};end;`;
+      return;
+    }
+    ui.notice.textContent='AR pilotu şu anda Android / ARCore cihazlarda etkin. iPhone Quick Look desteği sonraki adımda eklenecek.';
+  });
+}
 document.querySelector('[data-action="snapshot"]').addEventListener('click',()=>{const link=document.createElement('a');link.href=viewer.toDataURL();link.download=config.download.replace('.glb','.png');link.click();});document.querySelector('[data-action="snapshot-4k"]').addEventListener('click',()=>{const link=document.createElement('a');link.href=viewer.to4KDataURL();link.download=config.download.replace('.glb','_4K.png');link.click();});document.querySelector('[data-action="dimensions"]').addEventListener('click',event=>{const box=document.querySelector('#dimensions-overlay');box.hidden=!box.hidden;updateDimensions();event.currentTarget.setAttribute('aria-pressed',!box.hidden);});
 const resetModal=document.querySelector('#reset-modal'),sourceModal=document.querySelector('#source-modal');
 document.querySelector('#reset-materials').addEventListener('click',()=>resetModal.hidden=false);
