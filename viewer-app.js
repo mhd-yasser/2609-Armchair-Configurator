@@ -1,8 +1,10 @@
+import {openProductAR} from './product-ar.js?v=20261015-1';
 import * as THREE from 'three';
-import {createViewer} from './three-viewer.js';
+import {createViewer} from './three-viewer.js?v=20261015-1';
 import {woodPreviews} from './texture-previews.js';
 
 const page=document.body.dataset.product;
+let modelReady=false;
 const viewer=createViewer(document.querySelector('#product-viewer'));
 const viewerCanvas=viewer.querySelector('canvas');viewerCanvas.style.visibility='hidden';
 const ui={groups:document.querySelector('#material-groups'),details:document.querySelector('#material-details'),selection:document.querySelector('#selection'),notice:document.querySelector('#notice'),wheel:document.querySelector('#material-wheel'),wheelOptions:document.querySelector('#wheel-options')};
@@ -178,11 +180,11 @@ wheelHandle.addEventListener('pointerup',()=>{dragWheel=null;});wheelHandle.addE
 ui.wheel.querySelector('#wheel-close').addEventListener('click',closeWheel);document.querySelector('#wheel-prev').addEventListener('click',()=>{wheelPage--;renderWheel();});document.querySelector('#wheel-next').addEventListener('click',()=>{wheelPage++;renderWheel();});
 viewer.addEventListener('pointerdown',event=>pointerStart={x:event.clientX,y:event.clientY});viewer.addEventListener('pointerup',event=>{if(!pointerStart||Math.hypot(event.clientX-pointerStart.x,event.clientY-pointerStart.y)>7)return;const hit=viewer.materialFromPoint(event.clientX,event.clientY);const key=hit&&inferGroup(hit.object,hit);if(key)openWheel(key,hit.object,event.clientX,event.clientY);else closeWheel();});
 
-viewer.addEventListener('load',async()=>{try{isolateMaterials();if(page==='sofa')setupSofa();if(page==='desk')setupDesk();await previewLoads;await Promise.all(Object.keys(config.groups).map(key=>applyGroup(key,choice(key),null,true)));updateText();ui.notice.textContent='';viewerCanvas.style.visibility='visible';document.querySelector('#model-loading').hidden=true;
+viewer.addEventListener('load',async()=>{try{isolateMaterials();if(page==='sofa')setupSofa();if(page==='desk')setupDesk();await previewLoads;await Promise.all(Object.keys(config.groups).map(key=>applyGroup(key,choice(key),null,true)));updateText();ui.notice.textContent='';viewerCanvas.style.visibility='visible';document.querySelector('#model-loading').hidden=true;modelReady=true;document.querySelector('[data-action="ar"]').disabled=false;
   // Let the browser paint the lightweight result before requesting PBR maps.
   setTimeout(()=>{Promise.all(Object.keys(config.groups).map(key=>applyGroup(key))).catch(console.error);},200);
 }catch(error){console.error(error);ui.notice.textContent='Malzemeler yüklenemedi. Lütfen sayfayı yenileyin.';}});
-viewer.addEventListener('error',()=>{ui.notice.textContent='3D model yüklenemedi. Lütfen sayfayı yenileyin.';});viewer.addEventListener('progress',event=>{const bar=viewer.querySelector('.progress'),span=bar?.querySelector('span');if(span)span.style.width=`${event.detail.totalProgress*100}%`;if(bar)bar.hidden=event.detail.totalProgress===1;});
+viewer.addEventListener('error',()=>{modelReady=false;document.querySelector('[data-action="ar"]').disabled=true;ui.notice.textContent='3D model yüklenemedi. Lütfen sayfayı yenileyin.';});viewer.addEventListener('progress',event=>{const bar=viewer.querySelector('.progress'),span=bar?.querySelector('span');if(span)span.style.width=`${event.detail.totalProgress*100}%`;if(bar)bar.hidden=event.detail.totalProgress===1;});
 ui.notice.textContent='3D model yükleniyor…';viewer.src=config.file;
 
 const studio={environment:'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/brown_photostudio_02_1k.hdr',shadow:1.35,softness:.72};viewer.environmentImage=studio.environment;viewer.shadowIntensity=studio.shadow;viewer.shadowSoftness=studio.softness;viewer.setRotationSpeed(40);
@@ -286,3 +288,12 @@ function updateDimensions(){
   for(const guide of guides){const label=document.createElement('span');label.textContent=guide.label;label.style.left=`${(guide.start.x+guide.end.x)/2+guide.offset.x}px`;label.style.top=`${(guide.start.y+guide.end.y)/2+guide.offset.y}px`;overlay.append(label);}
 }
 setInterval(updateDimensions,250);
+
+const arButton=document.querySelector('[data-action="ar"]');
+arButton.addEventListener('click',async()=>{
+  if(!modelReady)return;
+  arButton.disabled=true;
+  try{await openProductAR(viewer,message=>ui.notice.textContent=message,{worldLock:true});}
+  catch(error){ui.notice.textContent='AR: '+error.message;}
+  finally{arButton.disabled=!modelReady;}
+});

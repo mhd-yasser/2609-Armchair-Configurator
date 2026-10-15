@@ -179,6 +179,7 @@ export function createViewer(element){
   }requestAnimationFrame(frame);
   Object.defineProperties(element,{
     src:{set:setModel},
+    arLighting:{get:()=>({texture:scene.environment,intensity:scene.environmentIntensity,rotation:scene.environmentRotation.y,exposure:renderer.toneMappingExposure})},
     model:{get:()=>object?{materials:materialAdapters,root:object,nodes:sourceNodes}:null},
     environmentImage:{set:environment},
     exposure:{set:value=>renderer.toneMappingExposure=value},
