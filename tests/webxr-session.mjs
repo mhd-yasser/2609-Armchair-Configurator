@@ -54,3 +54,15 @@ const v=viewer(),f=frame();f.createAnchor=async()=>{throw new Error('unsupported
 const overlay=document.body.children.at(-1);assert.match(overlay.children[1].textContent,/kullanılamadı/);await lastSession.end();
 await openProductAR(viewer());assert.equal(requestOptions.optionalFeatures,undefined);lastRenderer.loop(0,frame());await lastSession.end();
 console.log('PASS: unsupported-anchor warning and original non-opted-in AR startup preserved.');
+
+// Startup must preserve the click gesture and request XR before cloning geometry.
+let requested=false;
+const requestSession=navigator.xr.requestSession;
+navigator.xr.isSessionSupported=()=>{throw new Error('Capability await must not precede session request');};
+navigator.xr.requestSession=(...args)=>{requested=true;return requestSession(...args);};
+const startupViewer=viewer(),clone=startupViewer.model.root.clone;
+startupViewer.model.root.clone=function(...args){assert(requested);return clone.apply(this,args);};
+const startup=openProductAR(startupViewer,()=>{},{worldLock:true});
+assert(requested,'XR session must be requested synchronously from the click');
+await startup;await lastSession.end();
+console.log('PASS: gesture-preserving session request precedes capability waits and model cloning.');

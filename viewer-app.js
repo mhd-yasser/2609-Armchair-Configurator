@@ -1,4 +1,4 @@
-import {openProductAR} from './product-ar.js?v=20261015-1';
+import {openProductAR} from './product-ar.js?v=20261015-2';
 import * as THREE from 'three';
 import {createViewer} from './three-viewer.js?v=20261015-1';
 import {woodPreviews} from './texture-previews.js';
@@ -290,10 +290,19 @@ function updateDimensions(){
 setInterval(updateDimensions,250);
 
 const arButton=document.querySelector('[data-action="ar"]');
+const arStatus=document.createElement('div');
+arStatus.setAttribute('role','status');arStatus.hidden=true;
+arStatus.style.cssText='position:fixed;z-index:20000;top:76px;left:16px;right:16px;padding:16px;border-radius:10px;background:#0f1b2d;color:white;font:14px/1.5 Arial,sans-serif;box-shadow:0 4px 24px #0004';
+const arMessage=document.createElement('span'),arDismiss=document.createElement('button');
+arDismiss.type='button';arDismiss.textContent='×';arDismiss.setAttribute('aria-label','AR mesajını kapat');
+arDismiss.style.cssText='float:right;margin-left:12px;background:transparent;color:white;border:0;font-size:24px';
+arDismiss.onclick=()=>arStatus.hidden=true;arStatus.append(arDismiss,arMessage);document.body.append(arStatus);
+function showARStatus(message){arMessage.textContent=message;arStatus.hidden=!message;ui.notice.textContent=message;}
+
 arButton.addEventListener('click',async()=>{
   if(!modelReady)return;
   arButton.disabled=true;
-  try{await openProductAR(viewer,message=>ui.notice.textContent=message,{worldLock:true});}
-  catch(error){ui.notice.textContent='AR: '+error.message;}
+  try{await openProductAR(viewer,showARStatus,{worldLock:true});}
+  catch(error){console.error('AR startup failed',error);showARStatus('AR açılamadı ('+error.name+'): '+error.message+' — Android: Chrome ile açın ve kamera iznini kontrol edin. iPhone: Safari ile açın.');}
   finally{arButton.disabled=!modelReady;}
 });

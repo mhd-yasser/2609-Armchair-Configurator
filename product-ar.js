@@ -16,9 +16,9 @@ export async function exportCurrentProduct(viewer,format='glb'){
   return new Blob([bytes],{type:format==='usdz'?'model/vnd.usdz+zip':'model/gltf-binary'});
 }
 async function webXR(viewer,status,{worldLock=false}={}){
-  const product=snapshotProduct(viewer.model.root,true),scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera();
-  const state=preparePlacement(product,viewer.model.runtime?.ar),wall=state.settings.placement==='wall';
-  const holder=new THREE.Group();holder.add(product);holder.visible=false;scene.add(holder);
+  const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera();
+  const wall=placementSettings(viewer.model.runtime?.ar).placement==='wall';let state;
+  const holder=new THREE.Group();holder.visible=false;scene.add(holder);
   const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.xr.enabled=true;
   renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));
   let releaseEnvironment=()=>{};
@@ -57,6 +57,8 @@ async function webXR(viewer,status,{worldLock=false}={}){
   try{
     session=await navigator.xr.requestSession('immersive-ar',{requiredFeatures:['hit-test','dom-overlay'],...(worldLock?{optionalFeatures:['anchors']}:{}),domOverlay:{root:overlay}});
     session.addEventListener('end',dispose,{once:true});
+    const product=snapshotProduct(viewer.model.root,true);
+    state=preparePlacement(product,viewer.model.runtime?.ar);holder.add(product);
     renderer.xr.setReferenceSpaceType('local');await renderer.xr.setSession(session);
     releaseEnvironment=setupAREnvironment(renderer,scene,viewer.arLighting);
     reference=renderer.xr.getReferenceSpace();
@@ -97,7 +99,8 @@ async function webXR(viewer,status,{worldLock=false}={}){
 export async function openProductAR(viewer,status=()=>{},options={}){
   status('AR hazırlanıyor…');
   if(!viewer.model)throw new Error('Önce ürünü yükleyin.');
-  if(navigator.xr&&await navigator.xr.isSessionSupported('immersive-ar'))return webXR(viewer,status,options);
+  // Request from the click gesture, before capability awaits or model preparation.
+  if(navigator.xr&&!(/iPhone|iPad|iPod/.test(navigator.userAgent)||navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1))return webXR(viewer,status,options);
   if(/iPhone|iPad|iPod/.test(navigator.userAgent)||navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1){
     const blob=await exportCurrentProduct(viewer,'usdz'),href=URL.createObjectURL(blob);urls.push(href);
     const link=document.createElement('a');link.rel='ar';link.href=href+'#allowsContentScaling=0';link.download='VREEL_Product.usdz';const image=document.createElement('img');image.src=viewer.toDataURL();link.append(image);document.body.append(link);link.click();link.remove();status('');return;
