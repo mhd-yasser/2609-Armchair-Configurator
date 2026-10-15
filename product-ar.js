@@ -114,3 +114,15 @@ export function addARControls(viewer,host,status){
   const download=document.createElement('button');download.type='button';download.textContent='AR 3D File indir';download.onclick=async()=>{download.disabled=true;try{const blob=await exportCurrentProduct(viewer),u=URL.createObjectURL(blob);urls.push(u);const a=document.createElement('a');a.href=u;a.download='VREEL_AR_Current.glb';a.click();status('Güncel seçimler ve hareket konumu dışa aktarıldı.');}catch(e){status(e.message);}finally{download.disabled=false;}};
   host.append(ar,download);
 }
+
+// Read-only diagnostics, run after a failed launch; never request camera permission.
+export async function diagnoseARSupport(){
+  let immersive='unavailable',policy='unknown';
+  if(navigator.xr?.isSessionSupported){
+    try{immersive=String(await navigator.xr.isSessionSupported('immersive-ar'));}
+    catch(error){immersive=error.name||'error';}
+  }
+  const permissions=document.permissionsPolicy||document.featurePolicy;
+  try{if(permissions?.allowsFeature)policy=String(permissions.allowsFeature('xr-spatial-tracking'));}catch{}
+  return `AR kontrol 20261015-3 · immersive-ar=${immersive} · xr-policy=${policy} · secure=${isSecureContext}`;
+}

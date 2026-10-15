@@ -22,7 +22,7 @@ Object.defineProperty(globalThis,'navigator',{value:{xr:{async isSessionSupporte
 globalThis.arTestThree={...THREE,WebGLRenderer:Renderer};
 let source=readFileSync(new URL('../product-ar.js',import.meta.url),'utf8').replace("import * as THREE from './vendor/three.module.js';",'const THREE=globalThis.arTestThree;');
 for(const file of ['ar-world-anchor.js?v=20261014-1','ar-snapshot.js','ar-environment.js','ar-placement.js'])source=source.replace(`'./${file}'`,JSON.stringify(new URL('../'+file,import.meta.url).href));
-const {openProductAR}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+const {openProductAR,diagnoseARSupport}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 function viewer(){const root=new THREE.Group();root.scale.setScalar(.5);root.add(new THREE.Mesh(new THREE.BoxGeometry(2,1,1),new THREE.MeshStandardMaterial({metalness:1,roughness:.02})));return {model:{root,runtime:{ar:{placement:'floor'}}},arLighting:{texture:new THREE.Texture(),intensity:.8,exposure:1}};}
 function frame(){
  const state={hitX:1,valid:true,tracked:true,creates:0,deletes:0};
@@ -66,3 +66,13 @@ const startup=openProductAR(startupViewer,()=>{},{worldLock:true});
 assert(requested,'XR session must be requested synchronously from the click');
 await startup;await lastSession.end();
 console.log('PASS: gesture-preserving session request precedes capability waits and model cloning.');
+
+// A browser exposing navigator.xr may still reject immersive AR for this origin.
+Object.defineProperty(globalThis,'isSecureContext',{value:true,configurable:true});
+document.permissionsPolicy={allowsFeature:()=>false};
+navigator.xr.isSessionSupported=async()=>false;
+assert.match(await diagnoseARSupport(),/immersive-ar=false · xr-policy=false · secure=true/);
+document.permissionsPolicy={allowsFeature:()=>true};
+navigator.xr.isSessionSupported=async()=>true;
+assert.match(await diagnoseARSupport(),/immersive-ar=true · xr-policy=true/);
+console.log('PASS: origin support and spatial-tracking policy diagnostics do not request a session.');

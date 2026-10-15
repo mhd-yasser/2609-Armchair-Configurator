@@ -1,4 +1,4 @@
-import {openProductAR} from './product-ar.js?v=20261015-2';
+import {openProductAR,diagnoseARSupport} from './product-ar.js?v=20261015-3';
 import * as THREE from 'three';
 import {createViewer} from './three-viewer.js?v=20261015-1';
 import {woodPreviews} from './texture-previews.js';
@@ -303,6 +303,6 @@ arButton.addEventListener('click',async()=>{
   if(!modelReady)return;
   arButton.disabled=true;
   try{await openProductAR(viewer,showARStatus,{worldLock:true});}
-  catch(error){console.error('AR startup failed',error);showARStatus('AR açılamadı ('+error.name+'): '+error.message+' — Android: Chrome ile açın ve kamera iznini kontrol edin. iPhone: Safari ile açın.');}
+  catch(error){console.error('AR startup failed',error);showARStatus('AR açılamadı ('+error.name+'): '+error.message);const diagnostic=await diagnoseARSupport();showARStatus('AR açılamadı ('+error.name+'): '+error.message+' · '+diagnostic);}
   finally{arButton.disabled=!modelReady;}
 });
