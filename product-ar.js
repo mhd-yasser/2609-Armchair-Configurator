@@ -1,6 +1,6 @@
 import {ARWorldAnchor} from './ar-world-anchor.js?v=20261014-1';
 import * as THREE from './vendor/three.module.js';
-import {snapshotProduct} from './ar-snapshot.js';
+import {snapshotProduct} from './product-runtime.js?v=20261010-7';
 import {setupAREnvironment} from './ar-environment.js';
 import {placementSettings,surfacePose,preparePlacement,placeOnSurface} from './ar-placement.js';
 const urls=[];
@@ -16,9 +16,9 @@ export async function exportCurrentProduct(viewer,format='glb'){
   return new Blob([bytes],{type:format==='usdz'?'model/vnd.usdz+zip':'model/gltf-binary'});
 }
 async function webXR(viewer,status,{worldLock=false}={}){
-  const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera();
-  const wall=placementSettings(viewer.model.runtime?.ar).placement==='wall';let state;
-  const holder=new THREE.Group();holder.visible=false;scene.add(holder);
+  const product=snapshotProduct(viewer.model.root,true),scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera();
+  const state=preparePlacement(product,viewer.model.runtime?.ar),wall=state.settings.placement==='wall';
+  const holder=new THREE.Group();holder.add(product);holder.visible=false;scene.add(holder);
   const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.xr.enabled=true;
   renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));
   let releaseEnvironment=()=>{};
@@ -57,8 +57,6 @@ async function webXR(viewer,status,{worldLock=false}={}){
   try{
     session=await navigator.xr.requestSession('immersive-ar',{requiredFeatures:['hit-test','dom-overlay'],...(worldLock?{optionalFeatures:['anchors']}:{}),domOverlay:{root:overlay}});
     session.addEventListener('end',dispose,{once:true});
-    const product=snapshotProduct(viewer.model.root,true);
-    state=preparePlacement(product,viewer.model.runtime?.ar);holder.add(product);
     renderer.xr.setReferenceSpaceType('local');await renderer.xr.setSession(session);
     releaseEnvironment=setupAREnvironment(renderer,scene,viewer.arLighting);
     reference=renderer.xr.getReferenceSpace();
@@ -99,8 +97,7 @@ async function webXR(viewer,status,{worldLock=false}={}){
 export async function openProductAR(viewer,status=()=>{},options={}){
   status('AR hazırlanıyor…');
   if(!viewer.model)throw new Error('Önce ürünü yükleyin.');
-  // Request from the click gesture, before capability awaits or model preparation.
-  if(navigator.xr&&!(/iPhone|iPad|iPod/.test(navigator.userAgent)||navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1))return webXR(viewer,status,options);
+  if(navigator.xr&&await navigator.xr.isSessionSupported('immersive-ar'))return webXR(viewer,status,options);
   if(/iPhone|iPad|iPod/.test(navigator.userAgent)||navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1){
     const blob=await exportCurrentProduct(viewer,'usdz'),href=URL.createObjectURL(blob);urls.push(href);
     const link=document.createElement('a');link.rel='ar';link.href=href+'#allowsContentScaling=0';link.download='VREEL_Product.usdz';const image=document.createElement('img');image.src=viewer.toDataURL();link.append(image);document.body.append(link);link.click();link.remove();status('');return;
@@ -113,16 +110,4 @@ export function addARControls(viewer,host,status){
   ar.onclick=async()=>{ar.disabled=true;try{await openProductAR(viewer,status);}catch(e){status('AR: '+e.message);}finally{ar.disabled=false;}};
   const download=document.createElement('button');download.type='button';download.textContent='AR 3D File indir';download.onclick=async()=>{download.disabled=true;try{const blob=await exportCurrentProduct(viewer),u=URL.createObjectURL(blob);urls.push(u);const a=document.createElement('a');a.href=u;a.download='VREEL_AR_Current.glb';a.click();status('Güncel seçimler ve hareket konumu dışa aktarıldı.');}catch(e){status(e.message);}finally{download.disabled=false;}};
   host.append(ar,download);
-}
-
-// Read-only diagnostics, run after a failed launch; never request camera permission.
-export async function diagnoseARSupport(){
-  let immersive='unavailable',policy='unknown';
-  if(navigator.xr?.isSessionSupported){
-    try{immersive=String(await navigator.xr.isSessionSupported('immersive-ar'));}
-    catch(error){immersive=error.name||'error';}
-  }
-  const permissions=document.permissionsPolicy||document.featurePolicy;
-  try{if(permissions?.allowsFeature)policy=String(permissions.allowsFeature('xr-spatial-tracking'));}catch{}
-  return `AR kontrol 20261015-3 · immersive-ar=${immersive} · xr-policy=${policy} · secure=${isSecureContext}`;
 }
