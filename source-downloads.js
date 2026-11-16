@@ -24,8 +24,12 @@ export function bindSourceDownloads({config,page,downloadCurrent,root=document,f
     finally{button.disabled=false;}
   }
   if(config.draft)actions.replaceChildren();
-  const current=root.createElement('button');current.type='button';current.textContent='3D File İndir';
-  current.addEventListener('click',()=>run(current,downloadCurrent));actions.prepend(current);
+  // BARI public demo offers the manufacturer-supplied source archive only.
+  // Other viewers keep their existing current-configuration download behaviour.
+  if(config.draft?.id!=='orka-bari'){
+    const current=root.createElement('button');current.type='button';current.textContent='3D File İndir';
+    current.addEventListener('click',()=>run(current,downloadCurrent));actions.prepend(current);
+  }
   for(const file of config.sourceFiles||[]){
     const button=root.createElement('button');button.type='button';button.textContent=fileLabel(file.name)+' İndir';
     button.addEventListener('click',()=>run(button,()=>{
