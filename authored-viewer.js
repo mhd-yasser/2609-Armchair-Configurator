@@ -5,7 +5,8 @@ import {openProductAR,exportCurrentProduct} from './product-ar.js?v=20261014-1';
 import {measurementLabel} from './dimensions.js';
 import {loadCatalogueProduct} from './catalogue-store.js';
 import {mountAlternatives, applyComponentSelection} from './component-options.js?v=20261019-compatibility';
-import {getProduct} from './admin/store.js?v=20261014-1';
+// Public catalogue build intentionally excludes the experimental admin/control panel.
+const getProduct=async()=>null;
 const urls=[];
 const url=asset=>{if(asset.url)return new URL(asset.url,import.meta.url).href;const value=URL.createObjectURL(asset.blob);urls.push(value);return value;};
 window.addEventListener('pagehide',()=>urls.forEach(value=>URL.revokeObjectURL(value)));
