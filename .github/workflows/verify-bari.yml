@@ -70,6 +70,14 @@ jobs:
            await page.locator('#pdf-modal').waitFor({state:'visible',timeout:120000});
            if(!await page.locator('#pdf-modal').isVisible())throw Error('PDF preview modal missing');
            console.log('Loaded BARI, download form and PDF preview tested');
+           await page.locator('#pdf-modal .modal-close').click({timeout:20000});
+           for (const product of ['desk','chair','sofa']) {
+             await page.goto('http://127.0.0.1:8765/'+product+'/',{waitUntil:'domcontentloaded'});
+             await page.waitForFunction(()=>document.querySelector('#model-loading')?.hidden===true, {timeout:75000}).catch(()=>{});
+             console.log('Legacy viewer',product,'title',await page.title());
+             if(!await page.locator('#product-viewer').count())throw Error(product+' viewer missing');
+           }
+           console.log('Legacy desk, chair and sofa opened');
            if(problems.length)throw Error('Browser issues: '+problems.join(' | '));
            await browser.close();
           })().catch(e=>{console.error(e);process.exit(1)});
