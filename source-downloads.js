@@ -26,7 +26,7 @@ export function bindSourceDownloads({config,page,downloadCurrent,root=document,f
   if(config.draft)actions.replaceChildren();
   // BARI public demo offers the manufacturer-supplied source archive only.
   // Other viewers keep their existing current-configuration download behaviour.
-  if(config.draft?.id!=='orka-bari'){
+  if(!(config.draft?.brand==='ORKA' && config.draft?.name==='BARI')){
     const current=root.createElement('button');current.type='button';current.textContent='3D File İndir';
     current.addEventListener('click',()=>run(current,downloadCurrent));actions.prepend(current);
   }
