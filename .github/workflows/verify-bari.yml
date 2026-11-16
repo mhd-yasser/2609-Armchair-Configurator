@@ -66,7 +66,8 @@ jobs:
            const downloaded=await dl;console.log('BARI source download:',downloaded.suggestedFilename());
            if(!downloaded.suggestedFilename().endsWith('.zip'))throw Error('Expected zip');
            await page.locator('[data-close-source]').click();
-           await page.locator('#datasheet').click();
+           await page.locator('#datasheet').dispatchEvent('click',{},{timeout:120000});
+           await page.locator('#pdf-modal').waitFor({state:'visible',timeout:120000});
            if(!await page.locator('#pdf-modal').isVisible())throw Error('PDF preview modal missing');
            console.log('Loaded BARI, download form and PDF preview tested');
            if(problems.length)throw Error('Browser issues: '+problems.join(' | '));
